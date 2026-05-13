@@ -32,6 +32,7 @@
         <module>shared/common-lib</module>
         <module>services/api-gateway</module>
         <module>services/user-service</module>
+        <module>services/event-service</module>
     </modules>
 
     <dependencyManagement>
