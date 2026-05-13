@@ -1,0 +1,58 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - StripPrefix=1
+      routes:
+        - id: auth
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/auth/**
+        - id: users
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/users/**
+        - id: events
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/events/**
+        - id: tickets
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/tickets/**
+        - id: payments
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/payments/**
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowedOrigins:
+              - "http://localhost:5173"
+            allowedMethods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"]
+            allowedHeaders: ["*"]
+            allowCredentials: true
+            maxAge: 3600
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+jwt:
+  secret: ${JWT_SECRET:troque-este-segredo-por-um-valor-aleatorio-de-no-minimo-32-chars}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.ticketeira: DEBUG

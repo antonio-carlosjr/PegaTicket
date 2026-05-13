@@ -30,6 +30,7 @@
 
     <modules>
         <module>shared/common-lib</module>
+        <module>services/api-gateway</module>
     </modules>
 
     <dependencyManagement>

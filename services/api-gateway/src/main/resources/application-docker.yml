@@ -1,0 +1,19 @@
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: auth
+          uri: http://user-service:8081
+          predicates: [Path=/api/auth/**]
+        - id: users
+          uri: http://user-service:8081
+          predicates: [Path=/api/users/**]
+        - id: events
+          uri: http://event-service:8082
+          predicates: [Path=/api/events/**]
+        - id: tickets
+          uri: http://ticket-service:8083
+          predicates: [Path=/api/tickets/**]
+        - id: payments
+          uri: http://payment-service:8084
+          predicates: [Path=/api/payments/**]
