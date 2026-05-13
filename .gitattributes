@@ -1,0 +1,35 @@
+# Garante LF em arquivos que precisam ser executaveis dentro de containers Linux,
+# mesmo quando clonados em Windows com core.autocrlf=true.
+* text=auto
+
+*.sh        text eol=lf
+*.bash      text eol=lf
+Dockerfile  text eol=lf
+*.dockerfile text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+*.sql       text eol=lf
+*.conf      text eol=lf
+
+# Java / Maven
+*.java      text eol=lf diff=java
+*.xml       text eol=lf
+*.properties text eol=lf
+
+# Frontend
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.css       text eol=lf
+*.html      text eol=lf
+
+# Binarios
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.jar       binary
