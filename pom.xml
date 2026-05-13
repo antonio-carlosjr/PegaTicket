@@ -34,6 +34,7 @@
         <module>services/user-service</module>
         <module>services/event-service</module>
         <module>services/ticket-service</module>
+        <module>services/payment-service</module>
     </modules>
 
     <dependencyManagement>
