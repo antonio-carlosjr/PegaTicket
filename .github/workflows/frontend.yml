@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+
+defaults:
+  run:
+    working-directory: frontend
+
+jobs:
+  build:
+    name: build + lint (Node 20)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: build (tsc + vite)
+        run: npm run build
+
+      - name: lint
+        run: npm run lint
+        continue-on-error: true
