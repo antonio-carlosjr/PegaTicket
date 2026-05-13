@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: Ticketeira Event Service
+  version: 0.1.0
+  description: |
+    Catalogo de eventos, avaliacoes e reputacao do promotor.
+
+    **Sprint 0:** apenas stubs. Implementacao completa na Sprint 1.
+
+servers:
+  - url: http://localhost:8080/api
+    description: Via API Gateway
+  - url: http://localhost:8082
+    description: Direto no servico (dev)
+
+paths:
+  /events:
+    get:
+      summary: Listar eventos (com filtros, paginacao)
+      tags: [events]
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Evento' }
+              example: []
+    post:
+      summary: Criar evento (apenas promotor verificado)
+      tags: [events]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EventoCreate' }
+      responses:
+        '201':
+          description: Evento criado
+        '501':
+          description: NOT IMPLEMENTED (Sprint 0 stub)
+
+  /events/{id}:
+    get:
+      summary: Detalhe de um evento
+      tags: [events]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200':
+          description: Evento
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Evento' }
+        '404':
+          description: Nao encontrado
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TipoEvento:
+      type: string
+      enum: [GRATUITO, PAGO]
+
+    StatusEvento:
+      type: string
+      enum: [RASCUNHO, PUBLICADO, REALIZADO, CANCELADO]
+
+    EventoCreate:
+      type: object
+      required: [titulo, dataInicio, dataFim, local, tipo, capacidade]
+      properties:
+        titulo:      { type: string, maxLength: 160 }
+        descricao:   { type: string }
+        dataInicio:  { type: string, format: date-time }
+        dataFim:     { type: string, format: date-time }
+        local:       { type: string, maxLength: 200 }
+        tipo:        { $ref: '#/components/schemas/TipoEvento' }
+        capacidade:  { type: integer, minimum: 1 }
+        preco:       { type: number, format: double }
+        prazoReembolsoDias: { type: integer, minimum: 0 }
+
+    Evento:
+      allOf:
+        - $ref: '#/components/schemas/EventoCreate'
+        - type: object
+          properties:
+            id:          { type: integer, format: int64 }
+            status:      { $ref: '#/components/schemas/StatusEvento' }
+            promotorId:  { type: integer, format: int64 }
+            criadoEm:    { type: string, format: date-time }

@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info:
+  title: Ticketeira Ticket Service
+  version: 0.1.0
+  description: |
+    Controle de inscricoes, ingressos unicos (QR code) e check-in.
+
+    Garante unicidade via `UNIQUE(usuario_id, evento_id)` em `inscricoes`.
+
+    **Sprint 0:** apenas stubs.
+
+servers:
+  - url: http://localhost:8080/api
+    description: Via API Gateway
+
+paths:
+  /tickets/inscricoes:
+    post:
+      summary: Inscrever-se em um evento
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventoId]
+              properties:
+                eventoId: { type: integer, format: int64 }
+      responses:
+        '201': { description: Inscricao criada (gratuito) ou pendente (pago) }
+        '409': { description: Ja inscrito ou evento lotado }
+        '501': { description: NOT IMPLEMENTED }
+
+  /tickets/me:
+    get:
+      summary: Meus ingressos
+      tags: [tickets]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Lista de ingressos do usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Ingresso' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    StatusIngresso:
+      type: string
+      enum: [ATIVO, UTILIZADO, CANCELADO]
+
+    Ingresso:
+      type: object
+      properties:
+        id:          { type: integer, format: int64 }
+        inscricaoId: { type: integer, format: int64 }
+        codigoUnico: { type: string }
+        status:      { $ref: '#/components/schemas/StatusIngresso' }
+        emitidoEm:   { type: string, format: date-time }

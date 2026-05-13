@@ -1,0 +1,138 @@
+openapi: 3.0.3
+info:
+  title: Ticketeira User Service
+  version: 0.1.0
+  description: |
+    Cadastro, autenticacao e perfil de usuarios. Promotor e um usuario verificado.
+
+    **Auth via Gateway:** rotas fora de `/auth/*` recebem o header `X-User-Id` injetado
+    pelo API Gateway apos validar o JWT. Sem esse header, a resposta e 401.
+
+servers:
+  - url: http://localhost:8080/api
+    description: Via API Gateway
+  - url: http://localhost:8081
+    description: Direto no servico (dev)
+
+paths:
+  /auth/register:
+    post:
+      summary: Cadastrar novo usuario
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Usuario criado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+        '400':
+          description: Validacao falhou
+        '409':
+          description: E-mail ja cadastrado
+
+  /auth/login:
+    post:
+      summary: Autenticar e receber JWT
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Token gerado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '401':
+          description: Credenciais invalidas
+
+  /users/me:
+    get:
+      summary: Perfil do usuario autenticado
+      tags: [users]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Perfil
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+        '401':
+          description: Sem token ou header X-User-Id ausente
+
+  /users/{id}/verify:
+    put:
+      summary: Marcar usuario como verificado (promotor)
+      tags: [users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200':
+          description: Usuario verificado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Usuario' }
+
+  /actuator/health:
+    get:
+      summary: Health check
+      tags: [actuator]
+      responses:
+        '200':
+          description: UP
+          content:
+            application/json:
+              example: { status: UP }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [nome, email, senha]
+      properties:
+        nome:  { type: string, minLength: 2, maxLength: 120, example: "Ana Silva" }
+        email: { type: string, format: email, maxLength: 160 }
+        senha: { type: string, minLength: 6, maxLength: 72 }
+
+    LoginRequest:
+      type: object
+      required: [email, senha]
+      properties:
+        email: { type: string, format: email }
+        senha: { type: string }
+
+    LoginResponse:
+      type: object
+      properties:
+        token:        { type: string }
+        tokenType:    { type: string, example: Bearer }
+        expiresInMs:  { type: integer, format: int64, example: 3600000 }
+        userId:       { type: integer, format: int64 }
+        email:        { type: string, format: email }
+        verificado:   { type: boolean }
+
+    Usuario:
+      type: object
+      properties:
+        id:          { type: integer, format: int64 }
+        nome:        { type: string }
+        email:       { type: string, format: email }
+        verificado:  { type: boolean }
+        criadoEm:    { type: string, format: date-time }
