@@ -1,0 +1,224 @@
+# ============================================================
+# Ticketeira - stack local
+#
+# Perfis:
+#   (default)         -> apenas infra (postgres + rabbitmq)
+#   --profile backend -> sobe Gateway + 4 microsservicos (requer Dockerfiles, Bloco B)
+#   --profile frontend-> sobe o app React (requer scaffolding, Bloco C)
+#
+# Uso tipico:
+#   cp .env.example .env
+#   docker compose up -d                 # so a infra
+#   docker compose --profile backend --profile frontend up -d --build
+# ============================================================
+
+name: ticketeira
+
+services:
+  # ---------- Infra ----------
+  postgres:
+    image: postgres:16-alpine
+    container_name: ticketeira-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ticketeira}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ticketeira}
+      POSTGRES_DB: postgres
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: ticketeira-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ticketeira}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-ticketeira}
+      RABBITMQ_LOAD_DEFINITIONS: /etc/rabbitmq/definitions.json
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # ---------- Backend (profile: backend) ----------
+  api-gateway:
+    profiles: [backend]
+    build:
+      context: .
+      dockerfile: services/api-gateway/Dockerfile
+    container_name: ticketeira-gateway
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      user-service: { condition: service_healthy }
+      event-service: { condition: service_healthy }
+      ticket-service: { condition: service_healthy }
+      payment-service: { condition: service_healthy }
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  user-service:
+    profiles: [backend]
+    build:
+      context: .
+      dockerfile: services/user-service/Dockerfile
+    container_name: ticketeira-user
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_NAME: user_db
+      DB_USER: ${POSTGRES_USER:-ticketeira}
+      DB_PASS: ${POSTGRES_PASSWORD:-ticketeira}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
+      RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+    ports:
+      - "${USER_SERVICE_PORT:-8081}:8081"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8081/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  event-service:
+    profiles: [backend]
+    build:
+      context: .
+      dockerfile: services/event-service/Dockerfile
+    container_name: ticketeira-event
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_NAME: event_db
+      DB_USER: ${POSTGRES_USER:-ticketeira}
+      DB_PASS: ${POSTGRES_PASSWORD:-ticketeira}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
+      RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+    ports:
+      - "${EVENT_SERVICE_PORT:-8082}:8082"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8082/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  ticket-service:
+    profiles: [backend]
+    build:
+      context: .
+      dockerfile: services/ticket-service/Dockerfile
+    container_name: ticketeira-ticket
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_NAME: ticket_db
+      DB_USER: ${POSTGRES_USER:-ticketeira}
+      DB_PASS: ${POSTGRES_PASSWORD:-ticketeira}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
+      RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+    ports:
+      - "${TICKET_SERVICE_PORT:-8083}:8083"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  payment-service:
+    profiles: [backend]
+    build:
+      context: .
+      dockerfile: services/payment-service/Dockerfile
+    container_name: ticketeira-payment
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: postgres
+      DB_NAME: payment_db
+      DB_USER: ${POSTGRES_USER:-ticketeira}
+      DB_PASS: ${POSTGRES_PASSWORD:-ticketeira}
+      RABBIT_HOST: rabbitmq
+      RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
+      RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+    ports:
+      - "${PAYMENT_SERVICE_PORT:-8084}:8084"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8084/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ---------- Frontend (profile: frontend) ----------
+  frontend:
+    profiles: [frontend]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ticketeira-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8080}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    networks: [ticketeira-net]
+
+networks:
+  ticketeira-net:
+    driver: bridge
+    name: ticketeira-net
+
+volumes:
+  pg_data:
+    name: ticketeira-pg-data
+  rabbit_data:
+    name: ticketeira-rabbit-data

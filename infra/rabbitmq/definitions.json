@@ -1,0 +1,148 @@
+{
+  "rabbit_version": "3.13.0",
+  "users": [
+    {
+      "name": "ticketeira",
+      "password": "ticketeira",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    { "name": "/" }
+  ],
+  "permissions": [
+    {
+      "user": "ticketeira",
+      "vhost": "/",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "ticketeira.events",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "ticketeira.dlx",
+      "vhost": "/",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "queues": [
+    {
+      "name": "pedido.criado",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "pedido.criado"
+      }
+    },
+    {
+      "name": "pagamento.aprovado",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "pagamento.aprovado"
+      }
+    },
+    {
+      "name": "evento.finalizado",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "evento.finalizado"
+      }
+    },
+    {
+      "name": "pedido.criado.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "pagamento.aprovado.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "evento.finalizado.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "pedido.criado",
+      "destination_type": "queue",
+      "routing_key": "pedido.criado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "pagamento.aprovado",
+      "destination_type": "queue",
+      "routing_key": "pagamento.aprovado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "evento.finalizado",
+      "destination_type": "queue",
+      "routing_key": "evento.finalizado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "pedido.criado.dlq",
+      "destination_type": "queue",
+      "routing_key": "pedido.criado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "pagamento.aprovado.dlq",
+      "destination_type": "queue",
+      "routing_key": "pagamento.aprovado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "evento.finalizado.dlq",
+      "destination_type": "queue",
+      "routing_key": "evento.finalizado",
+      "arguments": {}
+    }
+  ],
+  "policies": [],
+  "parameters": [],
+  "global_parameters": []
+}
