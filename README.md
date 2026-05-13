@@ -63,37 +63,57 @@ Diagramas detalhados em [`docs/diagrams/`](docs/diagrams/) (containers C4 e vis�
 
 ---
 
-## Setup rápido (Bloco A — atual)
+## Setup rápido
 
 ```powershell
-# 1. Clonar e entrar no projeto
 git clone <repo-url> ticketeira
 cd ticketeira
 
-# 2. Copiar variáveis de ambiente
-copy .env.example .env       # PowerShell
-# cp .env.example .env       # bash
+copy .env.example .env       # PowerShell  (ou: cp .env.example .env)
+# Edite .env e troque JWT_SECRET por algo aleatório >= 32 chars
+# Em caso de conflito de portas (5432/8080), ver docs/setup.md
 
-# 3. Editar .env e substituir o JWT_SECRET por algo aleatório
-#    (>= 32 chars). Sugestão:
-#    openssl rand -base64 48
-
-# 4. Subir a infra (Postgres + RabbitMQ)
-docker compose up -d
-
-# 5. Verificar containers
-docker compose ps
+# tudo de uma vez (infra + 5 backends + frontend):
+docker compose --profile backend --profile frontend up -d --build
 ```
 
-Após `up -d` você deve ter:
+Perfis disponíveis:
 
-| Serviço | URL / porta |
+| Comando | O que sobe |
 |---|---|
-| PostgreSQL | `localhost:5432` (user `ticketeira`) |
-| RabbitMQ AMQP | `localhost:5672` |
-| **RabbitMQ Management UI** | http://localhost:15672 (login: `ticketeira` / `ticketeira`) |
+| `docker compose up -d` | só infra (Postgres + RabbitMQ) |
+| `docker compose --profile backend up -d --build` | infra + Gateway + 4 microsserviços |
+| `docker compose --profile frontend up -d --build` | infra + Vite dev server |
+| `docker compose --profile backend --profile frontend up -d --build` | tudo |
 
-A topologia (3 filas de domínio + 3 DLQs + 2 exchanges) é carregada automaticamente a partir de [`infra/rabbitmq/definitions.json`](infra/rabbitmq/definitions.json).
+URLs após `up`:
+
+| Recurso | URL |
+|---|---|
+| Frontend (Vite + HMR) | http://localhost:5173 |
+| **API Gateway** | http://localhost:8080 |
+| Gateway health | http://localhost:8080/actuator/health |
+| RabbitMQ Management UI | http://localhost:15672 (`ticketeira`/`ticketeira`) |
+| Swagger UI por serviço | http://localhost:8081..4/swagger-ui.html |
+
+A topologia AMQP (3 filas + 3 DLQs + 2 exchanges) é carregada automaticamente de [`infra/rabbitmq/definitions.json`](infra/rabbitmq/definitions.json). Os 4 databases isolados são criados via [`infra/postgres/init/01-create-databases.sql`](infra/postgres/init/01-create-databases.sql).
+
+## Smoke test (curl)
+
+```bash
+G=http://localhost:8080
+curl $G/actuator/health
+# {"status":"UP"}
+
+curl -X POST $G/api/auth/register -H "Content-Type: application/json" \
+  -d '{"nome":"Ana","email":"ana@example.com","senha":"senha123"}'
+
+TOKEN=$(curl -s -X POST $G/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"ana@example.com","senha":"senha123"}' \
+  | python -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+curl $G/api/users/me -H "Authorization: Bearer $TOKEN"
+```
 
 ---
 
@@ -169,12 +189,12 @@ Aba **Exchanges** → `ticketeira.events` (topic) e `ticketeira.dlx` (topic).
 
 | Sprint | Escopo | Status |
 |---|---|---|
-| **Sprint 0 — Bloco A** | Monorepo, parent POM, docker-compose, infra, common-lib | ✅ em curso |
-| Sprint 0 — Bloco B | Gateway + 4 microsserviços (esqueleto + auth JWT) | ⬜ |
-| Sprint 0 — Bloco C | Frontend Vite + docs/ADRs/OpenAPI + CI GitHub Actions | ⬜ |
-| Sprint 1+ | Implementação dos RFs (eventos, inscrições, pagamentos, check-in) | ⬜ |
+| Sprint 0 — Bloco A | Monorepo, parent POM, docker-compose, infra, common-lib | ✅ |
+| Sprint 0 — Bloco B | Gateway + 4 microsserviços + auth JWT funcional | ✅ |
+| Sprint 0 — Bloco C | Frontend Vite/React/TS + docs/ADRs/OpenAPI + CI GitHub Actions | ✅ |
+| Sprint 1 | Implementação dos RFs (CRUD eventos, inscrições, pagamento simulado, check-in) | ⬜ |
 
-Requisitos completos: ver `docs/requisitos.md` (a popular) ou o documento original da disciplina.
+Decisões arquiteturais em [`docs/adr/`](docs/adr). Contratos REST em [`docs/api/`](docs/api). Setup detalhado em [`docs/setup.md`](docs/setup.md).
 
 ---
 
