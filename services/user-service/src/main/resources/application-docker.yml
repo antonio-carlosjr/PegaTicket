@@ -1,0 +1,4 @@
+# Sobrescritas vazias por enquanto - todos os hosts ja vem por env var em docker-compose.yml.
+spring:
+  jpa:
+    show-sql: false
