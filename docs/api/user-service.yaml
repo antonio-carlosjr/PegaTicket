@@ -1,12 +1,12 @@
 openapi: 3.0.3
 info:
   title: Ticketeira User Service
-  version: 0.1.0
+  version: 0.2.0
   description: |
-    Cadastro, autenticacao e perfil de usuarios. Promotor e um usuario verificado.
+    Cadastro, autenticacao, papeis e recuperacao de senha.
 
-    **Auth via Gateway:** rotas fora de `/auth/*` recebem o header `X-User-Id` injetado
-    pelo API Gateway apos validar o JWT. Sem esse header, a resposta e 401.
+    **Auth via Gateway:** rotas fora de `/auth/*` recebem o header `X-User-Id`
+    injetado pelo Gateway apos validar o JWT. Sem esse header, a resposta e 401.
 
 servers:
   - url: http://localhost:8080/api
@@ -19,21 +19,39 @@ paths:
     post:
       summary: Cadastrar novo usuario
       tags: [auth]
+      description: |
+        Para `papel = PROMOTOR`, os campos `cpf` e `telefone` sao obrigatorios.
+        Promotores comecam com `verificado=false` e precisam de aprovacao do admin.
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: '#/components/schemas/RegisterRequest' }
+            examples:
+              participante:
+                summary: Participante simples
+                value:
+                  nome: "Ana Silva"
+                  email: "ana@example.com"
+                  senha: "senha123"
+              promotor:
+                summary: Promotor (pendente de aprovacao)
+                value:
+                  nome: "Carlos Promo"
+                  email: "carlos@x.com"
+                  senha: "senha123"
+                  papel: "PROMOTOR"
+                  cpf: "123.456.789-00"
+                  telefone: "(11) 91234-5678"
       responses:
         '201':
           description: Usuario criado
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Usuario' }
-        '400':
-          description: Validacao falhou
-        '409':
-          description: E-mail ja cadastrado
+        '400': { description: Validacao falhou }
+        '403': { description: Tentou se cadastrar como ADMIN }
+        '409': { description: E-mail ou CPF ja cadastrado }
 
   /auth/login:
     post:
@@ -50,8 +68,45 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/LoginResponse' }
-        '401':
-          description: Credenciais invalidas
+        '401': { description: Credenciais invalidas }
+
+  /auth/forgot-password:
+    post:
+      summary: Solicitar e-mail de recuperacao de senha
+      tags: [auth]
+      description: |
+        Envia (se o email existir) um link com token unico para redefinir senha.
+        Sempre retorna 200 para nao expor quais e-mails estao cadastrados.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: Solicitacao recebida (com ou sem envio real)
+
+  /auth/reset-password:
+    post:
+      summary: Redefinir senha com o token enviado por e-mail
+      tags: [auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, novaSenha]
+              properties:
+                token: { type: string }
+                novaSenha: { type: string, minLength: 6, maxLength: 72 }
+      responses:
+        '200': { description: Senha redefinida }
+        '400': { description: Token invalido, expirado ou ja usado }
 
   /users/me:
     get:
@@ -64,25 +119,18 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Usuario' }
-        '401':
-          description: Sem token ou header X-User-Id ausente
+        '401': { description: Sem token ou header X-User-Id ausente }
 
   /users/{id}/verify:
     put:
-      summary: Marcar usuario como verificado (promotor)
+      summary: Marcar promotor como verificado (admin)
       tags: [users]
       security: [{ bearerAuth: [] }]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer, format: int64 }
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
         '200':
           description: Usuario verificado
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Usuario' }
 
   /actuator/health:
     get:
@@ -91,9 +139,6 @@ paths:
       responses:
         '200':
           description: UP
-          content:
-            application/json:
-              example: { status: UP }
 
 components:
   securitySchemes:
@@ -103,13 +148,20 @@ components:
       bearerFormat: JWT
 
   schemas:
+    Papel:
+      type: string
+      enum: [PARTICIPANTE, PROMOTOR, ADMIN]
+
     RegisterRequest:
       type: object
       required: [nome, email, senha]
       properties:
-        nome:  { type: string, minLength: 2, maxLength: 120, example: "Ana Silva" }
-        email: { type: string, format: email, maxLength: 160 }
-        senha: { type: string, minLength: 6, maxLength: 72 }
+        nome:     { type: string, minLength: 2, maxLength: 120 }
+        email:    { type: string, format: email, maxLength: 160 }
+        senha:    { type: string, minLength: 6, maxLength: 72 }
+        papel:    { $ref: '#/components/schemas/Papel' }
+        cpf:      { type: string, pattern: '^\d{3}\.\d{3}\.\d{3}-\d{2}$' }
+        telefone: { type: string, pattern: '^\(\d{2}\) \d{4,5}-\d{4}$' }
 
     LoginRequest:
       type: object
@@ -126,6 +178,7 @@ components:
         expiresInMs:  { type: integer, format: int64, example: 3600000 }
         userId:       { type: integer, format: int64 }
         email:        { type: string, format: email }
+        papel:        { $ref: '#/components/schemas/Papel' }
         verificado:   { type: boolean }
 
     Usuario:
@@ -134,5 +187,6 @@ components:
         id:          { type: integer, format: int64 }
         nome:        { type: string }
         email:       { type: string, format: email }
+        papel:       { $ref: '#/components/schemas/Papel' }
         verificado:  { type: boolean }
         criadoEm:    { type: string, format: date-time }
