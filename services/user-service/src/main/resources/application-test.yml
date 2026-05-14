@@ -1,9 +1,13 @@
 spring:
   autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
-      - org.springframework.boot.autoconfigure.mail.MailSenderAutoConfiguration
-      - org.springframework.boot.autoconfigure.mail.MailSenderValidatorAutoConfiguration
+    exclude: org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+  mail:
+    host: localhost
+    port: 1025
+    properties:
+      mail.smtp.connectiontimeout: 1000
+      mail.smtp.timeout: 1000
+      mail.smtp.writetimeout: 1000
   datasource:
     url: jdbc:h2:mem:user_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver

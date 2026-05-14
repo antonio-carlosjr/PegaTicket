@@ -13,7 +13,7 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
 
     Optional<PasswordResetToken> findByTokenHash(String tokenHash);
 
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("UPDATE PasswordResetToken t SET t.usadoEm = :agora WHERE t.usuarioId = :usuarioId AND t.usadoEm IS NULL")
     int invalidarTokensAtivosDoUsuario(@Param("usuarioId") Long usuarioId, @Param("agora") OffsetDateTime agora);
 }
