@@ -1,9 +1,11 @@
 package com.ticketeira.user;
 
+import com.ticketeira.user.domain.Papel;
 import com.ticketeira.user.dto.LoginRequest;
 import com.ticketeira.user.dto.LoginResponse;
 import com.ticketeira.user.dto.RegisterRequest;
 import com.ticketeira.user.dto.UsuarioResponse;
+import com.ticketeira.user.repository.PerfilVerificadoRepository;
 import com.ticketeira.user.service.AuthService;
 import com.ticketeira.user.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -26,6 +28,17 @@ class UserServiceApplicationTests {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private PerfilVerificadoRepository perfis;
+
+    private static RegisterRequest participante(String nome, String email, String senha) {
+        return new RegisterRequest(nome, email, senha, null, null, null);
+    }
+
+    private static RegisterRequest promotor(String nome, String email, String senha, String cpf, String tel) {
+        return new RegisterRequest(nome, email, senha, Papel.PROMOTOR, cpf, tel);
+    }
+
     @Test
     void contextLoads() {
         assertThat(authService).isNotNull();
@@ -33,29 +46,75 @@ class UserServiceApplicationTests {
     }
 
     @Test
-    void registerELoginDevolvemTokenValido() {
-        UsuarioResponse registered = authService.register(
-                new RegisterRequest("Ana", "ana@example.com", "senha123"));
-        assertThat(registered.id()).isNotNull();
-        assertThat(registered.verificado()).isFalse();
+    void registerComoParticipanteJaVerificado() {
+        UsuarioResponse u = authService.register(participante("Ana", "ana@example.com", "senha123"));
 
-        LoginResponse login = authService.login(new LoginRequest("ana@example.com", "senha123"));
-        assertThat(login.token()).isNotBlank();
-        assertThat(login.tokenType()).isEqualTo("Bearer");
-        assertThat(login.userId()).isEqualTo(registered.id());
+        assertThat(u.id()).isNotNull();
+        assertThat(u.papel()).isEqualTo(Papel.PARTICIPANTE);
+        assertThat(u.verificado()).isTrue();
+    }
+
+    @Test
+    void registerComoPromotorFicaPendente() {
+        UsuarioResponse u = authService.register(promotor(
+                "Carlos", "carlos@x.com", "senha123",
+                "123.456.789-00", "(11) 91234-5678"));
+
+        assertThat(u.papel()).isEqualTo(Papel.PROMOTOR);
+        assertThat(u.verificado()).isFalse();
+
+        assertThat(perfis.findByUsuarioId(u.id())).isPresent();
+    }
+
+    @Test
+    void promotorSemCpfFalha() {
+        assertThatThrownBy(() -> authService.register(promotor(
+                "Sem CPF", "sc@x.com", "senha123", null, "(11) 91234-5678")))
+                .hasMessageContaining("CPF e obrigatorio");
+    }
+
+    @Test
+    void promotorComCpfDuplicadoFalha() {
+        authService.register(promotor("A", "a@x.com", "senha123",
+                "111.222.333-44", "(11) 91234-5678"));
+
+        assertThatThrownBy(() -> authService.register(promotor(
+                "B", "b@x.com", "senha123",
+                "111.222.333-44", "(11) 91234-5679")))
+                .hasMessageContaining("CPF ja cadastrado");
+    }
+
+    @Test
+    void registroAdminEhBloqueado() {
+        RegisterRequest req = new RegisterRequest(
+                "Hacker", "h@x.com", "senha123", Papel.ADMIN, null, null);
+
+        assertThatThrownBy(() -> authService.register(req))
+                .hasMessageContaining("ADMIN");
+    }
+
+    @Test
+    void loginRetornaTokenEPapel() {
+        authService.register(participante("Ana", "ana@example.com", "senha123"));
+
+        LoginResponse r = authService.login(new LoginRequest("ana@example.com", "senha123"));
+
+        assertThat(r.token()).isNotBlank();
+        assertThat(r.papel()).isEqualTo(Papel.PARTICIPANTE);
+        assertThat(r.tokenType()).isEqualTo("Bearer");
     }
 
     @Test
     void naoPodeRegistrarEmailDuplicado() {
-        authService.register(new RegisterRequest("Joao", "joao@x.com", "senha123"));
+        authService.register(participante("Joao", "joao@x.com", "senha123"));
         assertThatThrownBy(() ->
-                authService.register(new RegisterRequest("Outro", "joao@x.com", "senha123")))
+                authService.register(participante("Outro", "joao@x.com", "senha123")))
                 .hasMessageContaining("ja cadastrado");
     }
 
     @Test
     void loginComSenhaErradaFalha() {
-        authService.register(new RegisterRequest("Maria", "maria@x.com", "senha123"));
+        authService.register(participante("Maria", "maria@x.com", "senha123"));
         assertThatThrownBy(() ->
                 authService.login(new LoginRequest("maria@x.com", "errada")))
                 .hasMessageContaining("Credenciais");
