@@ -14,6 +14,9 @@ vi.mock('@/api/auth', async () => {
   }
 })
 
+const emailLabel = /^E-mail/
+const senhaLabel = /^Senha/
+
 describe('<Login>', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -27,16 +30,16 @@ describe('<Login>', () => {
 
   it('renderiza campos de email e senha', () => {
     renderWithProviders(<Login />)
-    expect(screen.getByLabelText(/e-mail/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/senha/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(emailLabel)).toBeInTheDocument()
+    expect(screen.getByLabelText(senhaLabel)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^entrar$/i })).toBeInTheDocument()
   })
 
   it('mostra erro de validacao para email invalido', async () => {
     renderWithProviders(<Login />)
-    await userEvent.type(screen.getByLabelText(/e-mail/i), 'naoeemail')
-    await userEvent.type(screen.getByLabelText(/senha/i), 'qualquer')
-    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    await userEvent.type(screen.getByLabelText(emailLabel), 'naoeemail')
+    await userEvent.type(screen.getByLabelText(senhaLabel), 'qualquer')
+    await userEvent.click(screen.getByRole('button', { name: /^entrar$/i }))
 
     expect(await screen.findByText(/E-mail invalido/)).toBeInTheDocument()
     expect(authApi.login).not.toHaveBeenCalled()
@@ -58,9 +61,9 @@ describe('<Login>', () => {
     })
 
     renderWithProviders(<Login />)
-    await userEvent.type(screen.getByLabelText(/e-mail/i), 'a@b.com')
-    await userEvent.type(screen.getByLabelText(/senha/i), 'senha123')
-    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    await userEvent.type(screen.getByLabelText(emailLabel), 'a@b.com')
+    await userEvent.type(screen.getByLabelText(senhaLabel), 'senha123')
+    await userEvent.click(screen.getByRole('button', { name: /^entrar$/i }))
 
     await waitFor(() => {
       expect(authApi.login).toHaveBeenCalledWith('a@b.com', 'senha123')

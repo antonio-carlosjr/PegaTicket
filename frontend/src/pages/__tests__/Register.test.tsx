@@ -14,6 +14,14 @@ vi.mock('@/api/auth', async () => {
   }
 })
 
+// Labels usam regex anchored para evitar conflito com aria-label do botao
+// "Mostrar senha" no PasswordInput.
+const nomeLabel = /^Nome/
+const emailLabel = /^E-mail/
+const senhaLabel = /^Senha/
+const cpfLabel = /^CPF/
+const telefoneLabel = /^Telefone/
+
 describe('<Register>', () => {
   beforeEach(() => {
     localStorage.clear()
@@ -32,16 +40,16 @@ describe('<Register>', () => {
   it('participante e a aba padrao', () => {
     renderWithProviders(<Register />)
     expect(screen.getByRole('tab', { name: /participante/i })).toHaveAttribute('data-state', 'active')
-    expect(screen.getByRole('button', { name: /participante/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /criar conta de participante/i })).toBeInTheDocument()
   })
 
   it('aba promotor mostra campos CPF e telefone', async () => {
     renderWithProviders(<Register />)
     await userEvent.click(screen.getByRole('tab', { name: /promotor/i }))
 
-    expect(await screen.findByLabelText(/cpf/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/telefone/i)).toBeInTheDocument()
-    expect(screen.getByText(/aprovacao do administrador/i)).toBeInTheDocument()
+    expect(await screen.findByLabelText(cpfLabel)).toBeInTheDocument()
+    expect(screen.getByLabelText(telefoneLabel)).toBeInTheDocument()
+    expect(screen.getByText(/verificacao do administrador/i)).toBeInTheDocument()
   })
 
   it('cadastra participante com dados validos', async () => {
@@ -51,10 +59,10 @@ describe('<Register>', () => {
     })
 
     renderWithProviders(<Register />)
-    await userEvent.type(screen.getByLabelText(/nome/i), 'Ana Silva')
-    await userEvent.type(screen.getByLabelText(/e-mail/i), 'ana@x.com')
-    await userEvent.type(screen.getByLabelText(/senha/i), 'senha123')
-    await userEvent.click(screen.getByRole('button', { name: /participante/i }))
+    await userEvent.type(screen.getByLabelText(nomeLabel), 'Ana Silva')
+    await userEvent.type(screen.getByLabelText(emailLabel), 'ana@x.com')
+    await userEvent.type(screen.getByLabelText(senhaLabel), 'senha123')
+    await userEvent.click(screen.getByRole('button', { name: /criar conta de participante/i }))
 
     await waitFor(() => {
       expect(authApi.register).toHaveBeenCalledWith({
@@ -70,16 +78,15 @@ describe('<Register>', () => {
     renderWithProviders(<Register />)
     await userEvent.click(screen.getByRole('tab', { name: /promotor/i }))
 
-    await userEvent.type(await screen.findByLabelText(/^nome/i), 'Carlos')
-    await userEvent.type(screen.getByLabelText(/e-mail/i), 'c@x.com')
-    await userEvent.type(screen.getByLabelText(/senha/i), 'senha123')
-    // CPF parcial - mascara nao completou
-    await userEvent.type(screen.getByLabelText(/cpf/i), '123')
-    await userEvent.type(screen.getByLabelText(/telefone/i), '11912345678')
+    await userEvent.type(await screen.findByLabelText(nomeLabel), 'Carlos')
+    await userEvent.type(screen.getByLabelText(emailLabel), 'c@x.com')
+    await userEvent.type(screen.getByLabelText(senhaLabel), 'senha123')
+    // CPF parcial - mascara nao completa
+    await userEvent.type(screen.getByLabelText(cpfLabel), '123')
+    await userEvent.type(screen.getByLabelText(telefoneLabel), '11912345678')
 
     await userEvent.click(screen.getByRole('button', { name: /solicitar cadastro/i }))
 
-    // Deve mostrar erro de validacao (zod)
     expect(await screen.findByText(/CPF deve estar no formato/i)).toBeInTheDocument()
     expect(authApi.register).not.toHaveBeenCalled()
   })

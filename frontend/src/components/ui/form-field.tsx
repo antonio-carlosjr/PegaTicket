@@ -25,7 +25,11 @@ export function FormField({ label, htmlFor, error, hint, required, children, cla
     <div className={cn('space-y-1.5', className)}>
       <Label htmlFor={htmlFor}>
         {label}
-        {required && <span className="ml-0.5 text-destructive">*</span>}
+        {required && (
+          <span className="ml-0.5 text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
       </Label>
       {children}
       {message && (
