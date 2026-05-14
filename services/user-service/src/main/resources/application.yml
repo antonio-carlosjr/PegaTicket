@@ -21,6 +21,29 @@ spring:
     port: ${RABBIT_PORT:5672}
     username: ${RABBIT_USER:ticketeira}
     password: ${RABBIT_PASS:ticketeira}
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:1025}
+    username: ${SMTP_USER:}
+    password: ${SMTP_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+        debug: false
+  thymeleaf:
+    cache: true
+    prefix: classpath:/templates/
+    suffix: .html
+
+app:
+  mail:
+    from: ${MAIL_FROM:no-reply@ticketeira.local}
+  password-reset:
+    base-url: ${PASSWORD_RESET_BASE_URL:http://localhost:5173/reset-password}
+    ttl-minutes: ${PASSWORD_RESET_TTL_MIN:60}
 
 server:
   port: 8081
@@ -35,6 +58,8 @@ management:
       show-details: never
   health:
     rabbit:
+      enabled: false
+    mail:
       enabled: false
 
 jwt:

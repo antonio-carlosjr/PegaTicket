@@ -58,6 +58,20 @@ services:
       timeout: 10s
       retries: 10
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: ticketeira-mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks: [ticketeira-net]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   # ---------- Backend (profile: backend) ----------
   api-gateway:
     profiles: [backend]
@@ -102,11 +116,17 @@ services:
       RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-3600000}
+      SMTP_HOST: mailhog
+      SMTP_PORT: 1025
+      MAIL_FROM: ${MAIL_FROM:-no-reply@ticketeira.local}
+      PASSWORD_RESET_BASE_URL: ${PASSWORD_RESET_BASE_URL:-http://localhost:5173/reset-password}
+      PASSWORD_RESET_TTL_MIN: ${PASSWORD_RESET_TTL_MIN:-60}
     ports:
       - "${USER_SERVICE_PORT:-8081}:8081"
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      mailhog: { condition: service_healthy }
     networks: [ticketeira-net]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:8081/actuator/health | grep -q UP"]
