@@ -26,20 +26,20 @@ public class PasswordResetService {
     private final PasswordResetTokenRepository tokens;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
-    private final String baseUrl;
+    private final String frontendBaseUrl;
     private final long ttlMinutes;
 
     public PasswordResetService(UsuarioRepository usuarios,
                                 PasswordResetTokenRepository tokens,
                                 PasswordEncoder passwordEncoder,
                                 EmailService emailService,
-                                @Value("${app.password-reset.base-url}") String baseUrl,
+                                @Value("${app.frontend.base-url}") String frontendBaseUrl,
                                 @Value("${app.password-reset.ttl-minutes}") long ttlMinutes) {
         this.usuarios = usuarios;
         this.tokens = tokens;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
-        this.baseUrl = baseUrl;
+        this.frontendBaseUrl = frontendBaseUrl.replaceAll("/+$", "");
         this.ttlMinutes = ttlMinutes;
     }
 
@@ -67,7 +67,7 @@ public class PasswordResetService {
 
         tokens.save(new PasswordResetToken(usuario.getId(), tokenHash, expiraEm));
 
-        String link = baseUrl + "?token=" + rawToken;
+        String link = frontendBaseUrl + "/reset-password?token=" + rawToken;
         Map<String, Object> vars = new HashMap<>();
         vars.put("nome", usuario.getNome());
         vars.put("linkReset", link);
@@ -75,7 +75,7 @@ public class PasswordResetService {
 
         emailService.enviarHtml(
                 usuario.getEmail(),
-                "Redefinicao de senha - Ticketeira",
+                "Redefinicao de senha - PegaTicket",
                 "email/password-reset",
                 vars
         );

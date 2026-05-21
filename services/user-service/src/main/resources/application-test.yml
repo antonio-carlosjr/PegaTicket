@@ -29,6 +29,7 @@ jwt:
 app:
   mail:
     from: test@ticketeira.local
+  frontend:
+    base-url: http://localhost:5173
   password-reset:
-    base-url: http://localhost:5173/reset-password
     ttl-minutes: 60

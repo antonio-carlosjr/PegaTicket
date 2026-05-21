@@ -88,7 +88,7 @@ Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event
    | ticket-service | `ticket_db` |
    | payment-service | `payment_db` |
 
-   **Apenas no user-service** (Resend + JWT + reset URL):
+   **Apenas no user-service** (Resend + JWT + URLs):
    ```
    JWT_SECRET=<gerar com: openssl rand -base64 48>
    JWT_EXPIRATION_MS=3600000
@@ -97,9 +97,13 @@ Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event
    SMTP_USER=resend
    SMTP_PASS=<api_key da Resend>
    MAIL_FROM=noreply@seudominio.com
-   PASSWORD_RESET_BASE_URL=https://pegaticket.vercel.app/reset-password
+   FRONTEND_BASE_URL=https://pegaticket.vercel.app
    PASSWORD_RESET_TTL_MIN=60
    ```
+
+   > A mesma `FRONTEND_BASE_URL` e usada tanto no link de reset
+   > (`{base}/reset-password?token=...`) quanto no botao "Explorar eventos" do
+   > email de boas-vindas.
 
 7. **Settings → Deploy → Health Check Path**: `/actuator/health`.
 
@@ -140,7 +144,7 @@ Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event
    (URL do gateway na Railway, sem barra final)
 6. **Deploy**. Após o build, a URL será `https://<projeto>.vercel.app`. Anote.
 7. Volte na Railway → gateway → atualize `FRONTEND_ORIGIN` com essa URL exata.
-8. Volte na Railway → user-service → atualize `PASSWORD_RESET_BASE_URL=https://<projeto>.vercel.app/reset-password`.
+8. Volte na Railway → user-service → atualize `FRONTEND_BASE_URL=https://<projeto>.vercel.app`.
 
 ---
 
