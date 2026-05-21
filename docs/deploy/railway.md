@@ -60,12 +60,14 @@ Guia para subir PegaTicket em produção: 5 microsserviços + Postgres + RabbitM
 
 Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event-service`, `ticket-service`, `payment-service`.
 
-1. **+ Create → GitHub Repo** → escolha o repo `PegaTicket`.
+1. **+ Create → GitHub Repo** → escolha o repo `PegaTicket`. Renomeie o serviço criado para o nome do microsserviço (ex.: `user-service`).
 2. **Settings → Source → Root Directory**: deixe vazio (`/`).
 3. **Settings → Source → Watch Paths**: `services/<nome>/**`, `shared/**`, `pom.xml`.
-4. **Settings → Build → Dockerfile Path**: `services/<nome>/Dockerfile`.
-5. **Settings → Networking → Generate Private Domain**: gera `<nome>.railway.internal`. Não habilite domínio público.
-6. **Variables**:
+4. **⚠ Settings → Build → Builder**: troque de **Nixpacks/Auto** para **Dockerfile**. Sem isso, Railway tenta auto-build com Nixpacks e falha (`Error: Unable to access jarfile target/*jar`).
+5. **Settings → Build → Dockerfile Path**: `services/<nome>/Dockerfile`.
+   - Alternativa: adicione `RAILWAY_DOCKERFILE_PATH=services/<nome>/Dockerfile` em **Variables** (mesmo efeito, mais rápido de aplicar).
+6. **Settings → Networking → Generate Private Domain**: gera `<nome>.railway.internal`. Não habilite domínio público.
+7. **Variables**:
 
    Comum a todos:
    ```
@@ -105,7 +107,7 @@ Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event
    > (`{base}/reset-password?token=...`) quanto no botao "Explorar eventos" do
    > email de boas-vindas.
 
-7. **Settings → Deploy → Health Check Path**: `/actuator/health`.
+8. **Settings → Deploy → Health Check Path**: `/actuator/health`.
 
 ---
 
@@ -179,6 +181,11 @@ E no browser: abrir `https://<projeto>.vercel.app`, fazer cadastro Promotor com 
 ---
 
 ## 8. Troubleshooting
+
+### `Error: Unable to access jarfile target/*jar` (Crashed no deploy)
+Railway esta usando **Nixpacks** em vez do nosso Dockerfile. Sintoma classico de monorepo sem config de build.
+
+**Fix:** Settings → Build → Builder = **Dockerfile** + Dockerfile Path = `services/<nome>/Dockerfile`. Ou adicione `RAILWAY_DOCKERFILE_PATH=services/<nome>/Dockerfile` em Variables. Redeploy.
 
 ### `entityManagerFactory failed: connection refused`
 O serviço subiu antes do Postgres ficar saudável. Soluções:
