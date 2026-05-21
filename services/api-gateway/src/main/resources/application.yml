@@ -7,37 +7,37 @@ spring:
         - StripPrefix=1
       routes:
         - id: auth
-          uri: http://localhost:8081
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/auth/**
         - id: users
-          uri: http://localhost:8081
+          uri: ${USER_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/users/**
         - id: events
-          uri: http://localhost:8082
+          uri: ${EVENT_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/events/**
         - id: tickets
-          uri: http://localhost:8083
+          uri: ${TICKET_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/tickets/**
         - id: payments
-          uri: http://localhost:8084
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/payments/**
       globalcors:
         cors-configurations:
           "[/**]":
-            allowedOrigins:
-              - "http://localhost:5173"
+            allowedOriginPatterns: ${FRONTEND_ORIGIN:http://localhost:5173}
             allowedMethods: ["GET","POST","PUT","DELETE","PATCH","OPTIONS"]
             allowedHeaders: ["*"]
             allowCredentials: true
             maxAge: 3600
 
 server:
-  port: 8080
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
 
 management:
   endpoints:
@@ -46,7 +46,7 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: when-authorized
+      show-details: never
 
 jwt:
   secret: ${JWT_SECRET:troque-este-segredo-por-um-valor-aleatorio-de-no-minimo-32-chars}
