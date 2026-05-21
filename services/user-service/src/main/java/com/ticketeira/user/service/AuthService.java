@@ -15,6 +15,8 @@ import com.ticketeira.user.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class AuthService {
@@ -23,15 +25,18 @@ public class AuthService {
     private final PerfilVerificadoRepository perfis;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final WelcomeEmailService welcomeEmailService;
 
     public AuthService(UsuarioRepository usuarios,
                        PerfilVerificadoRepository perfis,
                        PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil) {
+                       JwtUtil jwtUtil,
+                       WelcomeEmailService welcomeEmailService) {
         this.usuarios = usuarios;
         this.perfis = perfis;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.welcomeEmailService = welcomeEmailService;
     }
 
     @Transactional
@@ -57,6 +62,20 @@ public class AuthService {
             perfis.save(new PerfilVerificado(novo.getId(), req.telefone().trim(), req.cpf().trim()));
         } else {
             novo = usuarios.save(Usuario.novoParticipante(nome, email, hash));
+        }
+
+        // Envia e-mail de boas-vindas apenas apos o commit da transacao.
+        // Evita disparar email se a transacao rollar back por algum motivo.
+        final Usuario salvo = novo;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    welcomeEmailService.enviarBoasVindas(salvo);
+                }
+            });
+        } else {
+            welcomeEmailService.enviarBoasVindas(salvo);
         }
 
         return UsuarioResponse.from(novo);
