@@ -1,0 +1,15 @@
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: framework
+
+management:
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: INFO
+    com.ticketeira: INFO
+    org.springframework.cloud.gateway: WARN
+    reactor.netty.http.client: WARN
