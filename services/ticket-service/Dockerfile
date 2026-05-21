@@ -13,8 +13,7 @@ COPY services/payment-service/pom.xml services/payment-service/
 COPY shared/common-lib/src        shared/common-lib/src
 COPY services/ticket-service/src  services/ticket-service/src
 
-RUN --mount=type=cache,id=ticketeira-m2,target=/root/.m2 \
-    mvn -B -ntp -pl services/ticket-service -am package -DskipTests
+RUN mvn -B -ntp -pl services/ticket-service -am package -DskipTests
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app

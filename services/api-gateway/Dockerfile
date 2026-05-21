@@ -16,8 +16,7 @@ COPY services/payment-service/pom.xml services/payment-service/
 COPY shared/common-lib/src        shared/common-lib/src
 COPY services/api-gateway/src     services/api-gateway/src
 
-RUN --mount=type=cache,id=ticketeira-m2,target=/root/.m2 \
-    mvn -B -ntp -pl services/api-gateway -am package -DskipTests
+RUN mvn -B -ntp -pl services/api-gateway -am package -DskipTests
 
 # ---- Stage 2: runtime ----
 FROM eclipse-temurin:21-jre-alpine
