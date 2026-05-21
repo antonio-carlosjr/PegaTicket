@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bem-vindo ao PegaTicket</title>
+</head>
+<body style="margin:0; padding:0; background:#f3f4f6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,Roboto,sans-serif; color:#0f172a;">
+  <!-- Preheader -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;">
+    <th:block th:if="${papel} == 'PARTICIPANTE'">Sua conta esta pronta - descubra eventos e garanta seu ingresso.</th:block>
+    <th:block th:if="${papel} == 'PROMOTOR'">Recebemos seu cadastro de promotor. Aguarde a aprovacao para criar eventos.</th:block>
+  </div>
+
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#f3f4f6; padding:48px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,0.06), 0 8px 32px rgba(15,23,42,0.08);">
+
+          <!-- Hero gradient -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#3B82F6 0%,#1D4ED8 100%); padding:36px 36px 28px; color:#ffffff;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="vertical-align:middle; padding-right:12px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="40" height="40" style="background:rgba(255,255,255,0.16); border-radius:10px;">
+                      <tr>
+                        <td align="center" valign="middle">
+                          <img src="https://api.iconify.design/lucide/ticket.svg?color=white&width=22&height=22" width="22" height="22" alt="" style="display:block;">
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="vertical-align:middle;">
+                    <div style="font-size:22px; font-weight:700; letter-spacing:-0.4px;">PegaTicket</div>
+                    <div style="font-size:13px; opacity:0.85; margin-top:2px;">
+                      <th:block th:if="${papel} == 'PARTICIPANTE'">Sua conta esta pronta</th:block>
+                      <th:block th:if="${papel} == 'PROMOTOR'">Cadastro recebido</th:block>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Conteudo principal: PARTICIPANTE -->
+          <tr th:if="${papel} == 'PARTICIPANTE'">
+            <td style="padding:32px 36px;">
+              <p style="margin:0 0 12px; font-size:22px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">
+                Bem-vindo(a), <span th:text="${nome}">Usuario</span>! 🎉
+              </p>
+              <p style="margin:0 0 24px; color:#475569; font-size:15px; line-height:1.6;">
+                Sua conta foi criada com sucesso. Voce ja pode buscar eventos,
+                garantir seu ingresso e ter tudo na palma da mao no dia do show.
+              </p>
+
+              <!-- CTA -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
+                <tr>
+                  <td align="center" bgcolor="#3B82F6" style="border-radius:10px;">
+                    <a th:href="${linkApp}"
+                       style="display:inline-block; padding:14px 36px; background:#3B82F6; color:#ffffff !important; text-decoration:none; font-weight:600; border-radius:10px; font-size:15px; line-height:1;">
+                      Explorar eventos
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Features -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:24px 0;">
+                <tr>
+                  <td style="padding:12px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <table role="presentation" width="32" height="32" cellpadding="0" cellspacing="0" style="background:#dbeafe; border-radius:8px;">
+                            <tr><td align="center" valign="middle" style="color:#1D4ED8; font-weight:700; font-size:16px;">1</td></tr>
+                          </table>
+                        </td>
+                        <td valign="top" style="padding-left:12px;">
+                          <p style="margin:0 0 2px; font-weight:600; color:#0f172a; font-size:14px;">Busque eventos</p>
+                          <p style="margin:0; color:#64748b; font-size:13px; line-height:1.5;">Filtre por data, local e tipo. Veja a reputacao do promotor antes de comprar.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <table role="presentation" width="32" height="32" cellpadding="0" cellspacing="0" style="background:#dbeafe; border-radius:8px;">
+                            <tr><td align="center" valign="middle" style="color:#1D4ED8; font-weight:700; font-size:16px;">2</td></tr>
+                          </table>
+                        </td>
+                        <td valign="top" style="padding-left:12px;">
+                          <p style="margin:0 0 2px; font-weight:600; color:#0f172a; font-size:14px;">Pague com seguranca</p>
+                          <p style="margin:0; color:#64748b; font-size:13px; line-height:1.5;">O valor fica retido em escrow ate o dia do evento. Reembolso total se for cancelado.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:12px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="40" valign="top">
+                          <table role="presentation" width="32" height="32" cellpadding="0" cellspacing="0" style="background:#dbeafe; border-radius:8px;">
+                            <tr><td align="center" valign="middle" style="color:#1D4ED8; font-weight:700; font-size:16px;">3</td></tr>
+                          </table>
+                        </td>
+                        <td valign="top" style="padding-left:12px;">
+                          <p style="margin:0 0 2px; font-weight:600; color:#0f172a; font-size:14px;">Check-in em segundos</p>
+                          <p style="margin:0; color:#64748b; font-size:13px; line-height:1.5;">Seu ingresso tem QR Code unico - basta mostrar na entrada.</p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <hr style="border:none; border-top:1px solid #e2e8f0; margin:24px 0;">
+
+              <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.6;">
+                Quer organizar seus proprios eventos? Faca o upgrade para Promotor no seu perfil
+                e passe pela verificacao da equipe.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Conteudo principal: PROMOTOR -->
+          <tr th:if="${papel} == 'PROMOTOR'">
+            <td style="padding:32px 36px;">
+              <p style="margin:0 0 12px; font-size:22px; font-weight:700; color:#0f172a; letter-spacing:-0.3px;">
+                Recebemos seu cadastro, <span th:text="${nome}">Promotor</span>!
+              </p>
+              <p style="margin:0 0 24px; color:#475569; font-size:15px; line-height:1.6;">
+                Obrigado por escolher o PegaTicket para organizar seus eventos.
+                Seu cadastro de promotor esta passando por uma <strong>verificacao da equipe</strong>
+                para garantir a confianca dos participantes da plataforma.
+              </p>
+
+              <!-- Status box -->
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:#fef3c7; border-left:4px solid #f59e0b; border-radius:6px; margin:0 0 24px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 6px; color:#78350f; font-size:14px; font-weight:600;">
+                      ⏳ Cadastro em analise
+                    </p>
+                    <p style="margin:0; color:#78350f; font-size:13px; line-height:1.5;">
+                      A aprovacao costuma sair em ate <strong>2 dias uteis</strong>.
+                      Voce sera notificado por e-mail assim que estiver liberado para criar eventos.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px; color:#0f172a; font-size:15px; font-weight:600;">
+                Enquanto isso, voce ja pode:
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="margin:8px 0 24px;">
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="28" valign="top" style="color:#10b981; font-size:18px; font-weight:700; padding-top:2px;">✓</td>
+                        <td valign="top" style="color:#475569; font-size:14px; line-height:1.5;">
+                          <strong style="color:#0f172a;">Acessar o painel</strong> e ver o status do seu cadastro a qualquer momento
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="28" valign="top" style="color:#10b981; font-size:18px; font-weight:700; padding-top:2px;">✓</td>
+                        <td valign="top" style="color:#475569; font-size:14px; line-height:1.5;">
+                          <strong style="color:#0f172a;">Buscar e se inscrever em eventos</strong> como participante
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td width="28" valign="top" style="color:#10b981; font-size:18px; font-weight:700; padding-top:2px;">✓</td>
+                        <td valign="top" style="color:#475569; font-size:14px; line-height:1.5;">
+                          <strong style="color:#0f172a;">Planejar seus eventos</strong> e separar a documentacao necessaria
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto 28px;">
+                <tr>
+                  <td align="center" bgcolor="#3B82F6" style="border-radius:10px;">
+                    <a th:href="${linkApp}"
+                       style="display:inline-block; padding:14px 36px; background:#3B82F6; color:#ffffff !important; text-decoration:none; font-weight:600; border-radius:10px; font-size:15px; line-height:1;">
+                      Acessar meu painel
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <hr style="border:none; border-top:1px solid #e2e8f0; margin:24px 0;">
+
+              <p style="margin:0; color:#94a3b8; font-size:12px; line-height:1.6;">
+                Se passar de 3 dias uteis sem retorno, responda este e-mail (suporte@pegaticket).
+                Pode ser que precisemos de algum documento adicional.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f8fafc; padding:20px 36px; border-top:1px solid #e2e8f0; text-align:center;">
+              <p style="margin:0 0 4px; color:#475569; font-size:12px; font-weight:600;">PegaTicket</p>
+              <p style="margin:0; color:#94a3b8; font-size:11px;">
+                &copy; 2026 - Projeto academico de Engenharia de Software II
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:560px; margin-top:16px;">
+          <tr>
+            <td align="center">
+              <p style="margin:0; color:#94a3b8; font-size:11px;">
+                Voce esta recebendo este e-mail porque criou uma conta no PegaTicket.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
