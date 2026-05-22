@@ -1,0 +1,51 @@
+# ============================================================
+# Override: roda os microsservicos LOCAIS (em Docker) apontando
+# para o Postgres hospedado na RAILWAY (via TCP proxy publico).
+#
+# Util pra desenvolver local usando os dados/banco de producao,
+# sem precisar de um Postgres local.
+#
+# Uso (a partir da raiz do repo):
+#   docker compose -f docker-compose.yml -f docker-compose.railway-db.yml --profile backend up --build
+#
+# Requisitos no seu .env:
+#   RAILWAY_DB_HOST=<host do TCP proxy da Railway>     ex: kodama.proxy.rlwy.net
+#   RAILWAY_DB_PORT=<porta do TCP proxy>               ex: 14441
+#   RAILWAY_DB_PASS=<senha do Postgres da Railway>
+#
+# Observacoes:
+# - O Postgres LOCAL ainda sobe (os servicos so esperam ele ficar healthy),
+#   mas NAO e usado - os servicos conectam no Railway. Se quiser, ignore-o.
+# - sslmode=require: a conexao vai criptografada pela internet publica.
+# - O gateway local continua roteando pros servicos locais (rede do compose);
+#   so o BANCO e que fica na Railway.
+# ============================================================
+
+services:
+  user-service:
+    environment:
+      DB_HOST: ${RAILWAY_DB_HOST}
+      DB_PORT: ${RAILWAY_DB_PORT}
+      DB_PASS: ${RAILWAY_DB_PASS}
+      DB_SSLMODE: require
+
+  event-service:
+    environment:
+      DB_HOST: ${RAILWAY_DB_HOST}
+      DB_PORT: ${RAILWAY_DB_PORT}
+      DB_PASS: ${RAILWAY_DB_PASS}
+      DB_SSLMODE: require
+
+  ticket-service:
+    environment:
+      DB_HOST: ${RAILWAY_DB_HOST}
+      DB_PORT: ${RAILWAY_DB_PORT}
+      DB_PASS: ${RAILWAY_DB_PASS}
+      DB_SSLMODE: require
+
+  payment-service:
+    environment:
+      DB_HOST: ${RAILWAY_DB_HOST}
+      DB_PORT: ${RAILWAY_DB_PORT}
+      DB_PASS: ${RAILWAY_DB_PASS}
+      DB_SSLMODE: require
