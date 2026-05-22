@@ -23,14 +23,17 @@ export function Home() {
   const [health, setHealth] = useState<HealthState>('verificando')
 
   useEffect(() => {
+    // Status da plataforma e visivel apenas para ADMIN; so consulta health nesse caso.
+    if (user?.papel !== 'ADMIN') return
     gatewayHealth()
       .then((d) => setHealth(d.status === 'UP' ? 'UP' : 'DOWN'))
       .catch(() => setHealth('DOWN'))
-  }, [])
+  }, [user])
 
   if (!user) return null
 
   const ehPromotor = user.papel === 'PROMOTOR'
+  const ehAdmin = user.papel === 'ADMIN'
   const promotorPendente = ehPromotor && !user.verificado
 
   return (
@@ -115,38 +118,40 @@ export function Home() {
         />
       </section>
 
-      {/* Status da infra */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Activity className="h-5 w-5 text-primary" />
-            Status da plataforma
-          </CardTitle>
-          <CardDescription>Saude dos servicos backend em tempo real.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between rounded-md border bg-card p-4">
-            <div className="flex items-center gap-3">
-              {health === 'UP' && <CheckCircle2 className="h-5 w-5 text-success" />}
-              {health === 'DOWN' && <XCircle className="h-5 w-5 text-destructive" />}
-              {health === 'verificando' && <Clock className="h-5 w-5 animate-pulse text-muted-foreground" />}
-              <div>
-                <p className="font-medium">API Gateway</p>
-                <p className="text-xs text-muted-foreground">
-                  {health === 'UP' && 'Todos os servicos operacionais.'}
-                  {health === 'DOWN' && 'Servico indisponivel.'}
-                  {health === 'verificando' && 'Verificando saude...'}
-                </p>
+      {/* Status da infra - apenas ADMIN */}
+      {ehAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Activity className="h-5 w-5 text-primary" />
+              Status da plataforma
+            </CardTitle>
+            <CardDescription>Saude dos servicos backend em tempo real.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between rounded-md border bg-card p-4">
+              <div className="flex items-center gap-3">
+                {health === 'UP' && <CheckCircle2 className="h-5 w-5 text-success" />}
+                {health === 'DOWN' && <XCircle className="h-5 w-5 text-destructive" />}
+                {health === 'verificando' && <Clock className="h-5 w-5 animate-pulse text-muted-foreground" />}
+                <div>
+                  <p className="font-medium">API Gateway</p>
+                  <p className="text-xs text-muted-foreground">
+                    {health === 'UP' && 'Todos os servicos operacionais.'}
+                    {health === 'DOWN' && 'Servico indisponivel.'}
+                    {health === 'verificando' && 'Verificando saude...'}
+                  </p>
+                </div>
               </div>
+              <Badge
+                variant={health === 'UP' ? 'success' : health === 'DOWN' ? 'destructive' : 'secondary'}
+              >
+                {health}
+              </Badge>
             </div>
-            <Badge
-              variant={health === 'UP' ? 'success' : health === 'DOWN' ? 'destructive' : 'secondary'}
-            >
-              {health}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Identidade da conta */}
       <Card>
