@@ -29,9 +29,9 @@ spring:
     properties:
       mail:
         smtp:
-          auth: false
+          auth: ${SMTP_AUTH:false}
           starttls:
-            enable: false
+            enable: ${SMTP_STARTTLS:false}
         debug: false
   thymeleaf:
     cache: true
