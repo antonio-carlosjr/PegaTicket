@@ -1,0 +1,51 @@
+# Backlog — Ticketeira
+
+> Mantido pelo PO. Histórias movem BACKLOG → SPRINT-<n> → DONE. IDs são estáveis.
+> Roadmap-fonte: [`architectural-plan.md`](architectural-plan.md) §8.
+
+## Legenda
+`BACKLOG` · `SPRINT-<n>` (em andamento) · `DONE` · `BLOCKED`
+
+---
+
+## Épico A — Eventos (event-service) · RF02, RF08
+| ID | História | Estado |
+|---|---|---|
+| US-020 | Como promotor verificado, quero criar um evento (gratuito ou pago) para abrir inscrições | BACKLOG |
+| US-021 | Como promotor, quero editar/publicar/cancelar meu evento para gerir a oferta | BACKLOG |
+| US-022 | Como participante, quero listar/buscar eventos publicados para escolher onde ir | BACKLOG |
+| US-023 | Como participante, quero ver o detalhe de um evento (vagas, preço, data) | BACKLOG |
+| US-024 | Como participante, quero avaliar um evento que participei (nota 1-5) | BACKLOG |
+| US-025 | Como promotor, quero ver a reputação (média de avaliações) do meu evento | BACKLOG |
+
+## Épico B — Inscrições & Ingressos (ticket-service) · RF03, RF04, RF09, RF10
+| ID | História | Estado |
+|---|---|---|
+| US-030 | Como participante, quero me inscrever num evento gratuito e receber meu ingresso | BACKLOG |
+| US-031 | Como participante, quero me inscrever num evento (com controle de capacidade e sem dupla inscrição) | BACKLOG |
+| US-032 | Como participante, quero receber um ingresso único com QR após confirmação | BACKLOG |
+| US-033 | Como participante, quero ver "meus ingressos" e histórico de inscrições | BACKLOG |
+| US-034 | Como promotor, quero validar o ingresso (check-in por QR) na porta do evento | BACKLOG |
+| US-035 | Como participante, quero cancelar minha inscrição conforme a política | BACKLOG |
+
+## Épico C — Pagamentos & Escrow (payment-service) · RF05, RF06
+| ID | História | Estado |
+|---|---|---|
+| US-040 | Como participante, quero pagar um evento pago (gateway simulado) com retenção em escrow | BACKLOG |
+| US-041 | Como sistema, quero emitir o ingresso só após `pagamento.aprovado` (saga de inscrição paga) | BACKLOG |
+| US-042 | Como participante, quero ser reembolsado se o evento for cancelado | BACKLOG |
+| US-043 | Como promotor, quero receber o repasse (menos taxa de 10%) após o evento finalizado | BACKLOG |
+
+## Épico D — Identidade (user-service) · dívidas conhecidas
+| ID | História | Estado |
+|---|---|---|
+| US-050 | Como admin, quero aprovar/rejeitar promotores pendentes (tela + endpoint protegido) | BACKLOG |
+| US-051 | Como sistema, quero que o papel trafegue no token/header para autorização real (fecha dívida ADR) | BACKLOG |
+
+## Épico E — Plataforma · RNF09
+| ID | História | Estado |
+|---|---|---|
+| US-060 | Como time, quero consumidores RabbitMQ idempotentes (`processed_events`) ligados | BACKLOG |
+| US-061 | Como time, quero testes de carga no abre-vendas (concorrência de inscrição) | BACKLOG |
+
+> O PO seleciona um subconjunto coerente por sprint (~2 semanas), priorizando o caminho feliz ponta-a-ponta antes de bordas.
