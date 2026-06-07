@@ -66,5 +66,8 @@ docker-data/
 infra/postgres/data/
 infra/rabbitmq/data/
 
+# ---- Claude Code (estado interno; commands/agents SAO versionados) ----
+.claude/worktrees/
+
 # ---- Auxiliares deste worktree ----
 visao_geral.txt
