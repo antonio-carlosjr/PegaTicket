@@ -130,8 +130,8 @@ ticketeira/
 ## Setup rápido
 
 ```powershell
-git clone https://gitlab.com/matheushbm192/joinup.git ticketeira
-cd ticketeira
+git clone https://github.com/antonio-carlosjr/PegaTicket.git
+cd PegaTicket
 
 # Copiar variáveis (Windows / Linux)
 copy .env.example .env
