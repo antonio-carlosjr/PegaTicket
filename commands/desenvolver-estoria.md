@@ -19,6 +19,18 @@ Modelos `opus`/`sonnet` (Arquiteto/Revisor opus), nunca `haiku`. Commits atômic
 5. **Tester** — rodar os testes afetados; `test-report.md` (seção da estória) + `bugs.md`; loop de bug até zerar P0/P1 da estória.
 6. **Entrega** — resumo: branch, commits, estado dos testes; dizer se integra à branch do sprint ou vira PR próprio. **Não abrir PR aqui.**
 
+## Paralelismo entre devs (dividir carga)
+Dois (ou mais) devs tocam estórias **independentes** do mesmo sprint em paralelo, cada um na sua branch:
+
+```
+# Dev A
+/desenvolver-estoria 3 US-031     # capacidade + concorrência  → feat/sprint-3/US-031-capacidade
+# Dev B (ao mesmo tempo)
+/desenvolver-estoria 3 US-033     # meus ingressos            → feat/sprint-3/US-033-meus-ingressos
+```
+
+Cada branch integra à branch do sprint (`feat/sprint-<n>-...`) ao ficar verde; o **DevOps** coordena a ordem de merge e resolve conflitos. Estórias com **dependência** (ex.: US-032 depende de US-030) **não** paralelizam — rode em sequência. Quem não usa Claude Code abre este runbook e segue os passos manualmente para a sua estória.
+
 ## Saídas
 Código + testes da estória; `backend-log.md`/`frontend-log.md`/handoffs atualizados; seção no `test-report.md`.
 
