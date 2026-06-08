@@ -1,6 +1,6 @@
 # Comando: desenvolver-sprint `<n>`
 
-> Runbook **versionado e tool-agnostic**. Executável pelo Claude (`/desenvolver-sprint`), por outra IA, ou seguido por um dev. Toda a lógica das fases está em [`workflows/pipeline.md`](../workflows/pipeline.md) — este arquivo só orquestra a ordem e os gates.
+> Toda a lógica das fases está em [`workflows/pipeline.md`](../workflows/pipeline.md) — este arquivo só orquestra a ordem e os gates.
 
 **Executor:** orquestrador.
 **Objetivo:** rodar o pipeline SDD completo de um sprint, com commits atômicos reais.

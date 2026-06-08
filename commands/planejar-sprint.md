@@ -1,6 +1,6 @@
 # Comando: planejar-sprint `<n|tema>`
 
-> Runbook **versionado e tool-agnostic**. Pode ser executado pelo Claude (via `/planejar-sprint`), por outra IA, ou seguido manualmente por um dev. Não depende do Claude Code — tudo que ele referencia está neste repo.
+> Runbook **versionado e tool-agnostic**. Pode ser executado pelo Claude (via `/planejar-sprint`), por outra IA, ou seguido manualmente por um dev.
 
 **Executor:** orquestrador (quem coordena o time).
 **Objetivo:** planejamento profundo (ultra-plan) de um sprint → spec mestre + planning do PO.
