@@ -115,10 +115,12 @@ frontend/src/
 - Estória/épico: `feat/sprint-<n>/<US-id>-<slug>` quando há paralelismo de devs.
 - Fix: `fix/<slug>`. Hotfix: `hotfix/<slug>`.
 
+> **1 estória = 1 dono.** Antes de criar a branch, **reivindique a estória** preenchendo a coluna *Dono* em [`memory/project/checklist-estorias.md`](../memory/project/checklist-estorias.md) — assim ninguém toca a mesma estória. O `<US-id>` na branch + no commit (abaixo) torna isso rastreável.
+
 ### Commits — **atômicos** e **Conventional Commits**
 - Cada pequena unidade coesa = 1 commit. Não acumular feature inteira num commit gigante.
 - Tipos: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `chore:`, `ci:`, `build:`, `perf:`.
-- Escopo opcional: `feat(ticket): inscrição com unique constraint`.
+- **Escopo = ID da estória** no trabalho de sprint: `tipo(US-xxx): assunto`. Ex.: `feat(US-031): inscricao com unique constraint`, `test(US-031): cenario de ultima vaga concorrente`, `fix(US-031): libera vaga quando inscricao falha`. Assim todo commit fica amarrado à estória — `git log --grep US-031` mostra tudo dela e fica claro quem está em quê (anti-duplicação). Para trabalho **transversal** (infra/pipeline/docs) use a área: `build:`, `ci:`, `docs(sdd): ...`.
 - Subject ≤ 72 chars, imperativo, pt-BR ou en (escolha e mantenha).
 - Corpo explica o **porquê** quando não óbvio.
 - **NÃO usar trailer `Co-Authored-By`** (preferência explícita do dono do projeto).
