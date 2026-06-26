@@ -10,6 +10,7 @@ vi.mock('@/api/auth', async () => {
   return {
     ...real,
     register: vi.fn(),
+    login: vi.fn(),
     me: vi.fn(),
   }
 })

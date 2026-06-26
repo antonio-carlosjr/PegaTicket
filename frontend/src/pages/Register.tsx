@@ -17,13 +17,27 @@ import {
   type RegisterParticipanteValues,
   type RegisterPromotorValues,
 } from '@/lib/validation'
-import { register as registerApi, extractApiError } from '@/api/auth'
+import { register as registerApi, login, extractApiError } from '@/api/auth'
+import { useAuth } from '@/hooks/useAuth'
 
 type Papel = 'PARTICIPANTE' | 'PROMOTOR'
 
 export function Register() {
   const navigate = useNavigate()
+  const { signIn } = useAuth()
   const [papel, setPapel] = useState<Papel>('PARTICIPANTE')
+
+  // Auto-login apos o registro: autentica e vai pra home; se o login falhar
+  // (ex.: cold start), cai no /login (a conta ja foi criada).
+  async function entrarOuLogin(email: string, senha: string) {
+    try {
+      const resp = await login(email, senha)
+      signIn(resp)
+      navigate('/')
+    } catch {
+      navigate('/login')
+    }
+  }
 
   return (
     <AuthLayout
@@ -51,18 +65,18 @@ export function Register() {
         </TabsList>
 
         <TabsContent value="PARTICIPANTE">
-          <FormParticipante onSuccess={() => navigate('/login')} />
+          <FormParticipante onSuccess={entrarOuLogin} />
         </TabsContent>
 
         <TabsContent value="PROMOTOR">
-          <FormPromotor onSuccess={() => navigate('/login')} />
+          <FormPromotor onSuccess={entrarOuLogin} />
         </TabsContent>
       </Tabs>
     </AuthLayout>
   )
 }
 
-function FormParticipante({ onSuccess }: { onSuccess: () => void }) {
+function FormParticipante({ onSuccess }: { onSuccess: (email: string, senha: string) => void }) {
   const {
     register,
     handleSubmit,
@@ -75,8 +89,8 @@ function FormParticipante({ onSuccess }: { onSuccess: () => void }) {
   async function onSubmit(values: RegisterParticipanteValues) {
     try {
       await registerApi({ ...values, papel: 'PARTICIPANTE' })
-      toast.success('Conta criada!', { description: 'Voce ja pode fazer login.' })
-      onSuccess()
+      toast.success('Conta criada!', { description: 'Bem-vindo(a) ao PegaTicket.' })
+      onSuccess(values.email, values.senha)
     } catch (e) {
       toast.error('Nao foi possivel criar a conta', { description: extractApiError(e) })
     }
@@ -124,7 +138,7 @@ function FormParticipante({ onSuccess }: { onSuccess: () => void }) {
   )
 }
 
-function FormPromotor({ onSuccess }: { onSuccess: () => void }) {
+function FormPromotor({ onSuccess }: { onSuccess: (email: string, senha: string) => void }) {
   const {
     register,
     handleSubmit,
@@ -141,7 +155,7 @@ function FormPromotor({ onSuccess }: { onSuccess: () => void }) {
       toast.success('Cadastro enviado!', {
         description: 'Aguarde a aprovacao do administrador para criar eventos.',
       })
-      onSuccess()
+      onSuccess(values.email, values.senha)
     } catch (e) {
       toast.error('Nao foi possivel criar a conta', { description: extractApiError(e) })
     }
