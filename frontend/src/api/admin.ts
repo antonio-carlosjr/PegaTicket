@@ -33,8 +33,8 @@ export type UsuarioDetalhe = UsuarioAdmin & {
 }
 
 export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
-  const { data } = await api.get<UsuarioAdmin[]>('/api/users')
-  return data
+  const { data } = await api.get<{ content: UsuarioAdmin[] }>('/api/users')
+  return data.content
 }
 
 export async function detalharUsuario(id: number): Promise<UsuarioDetalhe> {

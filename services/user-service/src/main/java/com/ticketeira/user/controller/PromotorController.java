@@ -1,7 +1,7 @@
 package com.ticketeira.user.controller;
 
 import com.ticketeira.common.exception.UnauthorizedException;
-import com.ticketeira.user.dto.RegisterRequest;
+import com.ticketeira.user.dto.SolicitarPromotorRequest;
 import com.ticketeira.user.service.PromotorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +24,7 @@ public class PromotorController {
 
     @PostMapping("/solicitar")
     public ResponseEntity<Void> solicitar(@RequestHeader(value = "X-User-Id", required = false) Long userId,
-                                          @Valid @RequestBody RegisterRequest req) {
+                                          @Valid @RequestBody SolicitarPromotorRequest req) {
         if (userId == null) {
             throw new UnauthorizedException("Header X-User-Id ausente.");
         }

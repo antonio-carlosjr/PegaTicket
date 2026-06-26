@@ -9,6 +9,10 @@ import com.ticketeira.user.repository.PerfilVerificadoRepository;
 import com.ticketeira.user.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.ticketeira.user.domain.Papel;
+import com.ticketeira.user.dto.UsuarioResponse;
 
 @Service
 public class AdminService {
@@ -26,8 +30,8 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public java.util.List<com.ticketeira.user.dto.UsuarioResponse> listarTodos() {
-        return usuarios.findAll().stream().map(com.ticketeira.user.dto.UsuarioResponse::from).toList();
+    public Page<UsuarioResponse> listarTodos(Boolean ativo, Boolean verificado, Papel papel, String busca, Pageable pageable) {
+        return usuarios.findComFiltros(ativo, verificado, papel, busca, pageable).map(UsuarioResponse::from);
     }
 
     @Transactional(readOnly = true)

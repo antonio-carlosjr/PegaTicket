@@ -2,7 +2,7 @@ package com.ticketeira.user.service;
 
 import com.ticketeira.common.exception.BusinessException;
 import com.ticketeira.user.domain.PerfilVerificado;
-import com.ticketeira.user.dto.RegisterRequest;
+import com.ticketeira.user.dto.SolicitarPromotorRequest;
 import com.ticketeira.user.repository.PerfilVerificadoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +17,7 @@ public class PromotorService {
     }
 
     @Transactional
-    public void solicitarOuReenviar(Long usuarioId, RegisterRequest req) {
+    public void solicitarOuReenviar(Long usuarioId, SolicitarPromotorRequest req) {
         if (req.cpf() == null || req.cpf().isBlank() || req.telefone() == null || req.telefone().isBlank()) {
             throw new BusinessException("CPF e Telefone são obrigatórios para promotores.", 400);
         }

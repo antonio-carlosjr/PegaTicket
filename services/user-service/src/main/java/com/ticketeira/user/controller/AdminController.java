@@ -10,6 +10,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import com.ticketeira.user.domain.Papel;
+import com.ticketeira.user.dto.UsuarioResponse;
 
 @RestController
 @RequestMapping("/users")
@@ -27,10 +33,16 @@ public class AdminController {
         }
     }
 
-    @org.springframework.web.bind.annotation.GetMapping
-    public ResponseEntity<java.util.List<com.ticketeira.user.dto.UsuarioResponse>> listar(@RequestHeader("X-User-Papel") String papel) {
-        requireAdmin(papel);
-        return ResponseEntity.ok(adminService.listarTodos());
+    @GetMapping
+    public ResponseEntity<Page<UsuarioResponse>> listar(
+            @RequestParam(required = false) Boolean ativo,
+            @RequestParam(required = false) Boolean verificado,
+            @RequestParam(required = false) Papel papel,
+            @RequestParam(required = false) String busca,
+            Pageable pageable,
+            @RequestHeader("X-User-Papel") String headerPapel) {
+        requireAdmin(headerPapel);
+        return ResponseEntity.ok(adminService.listarTodos(ativo, verificado, papel, busca, pageable));
     }
 
     @org.springframework.web.bind.annotation.GetMapping("/{id}")
