@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.stream.Collectors;
 
@@ -40,6 +41,19 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining("; "));
         String fullMsg = msg.isEmpty() ? classMsg : (classMsg.isEmpty() ? msg : msg + "; " + classMsg);
         ErrorResponse body = ErrorResponse.of(400, "Bad Request", fullMsg, req.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Parametro de query/path com tipo invalido (ex.: tipo=FOO, de=2026-06-20T14:00 sem offset,
+     * id nao-numerico). Sem este handler, cai no generico → 500, contrariando o contrato
+     * (api-contracts.md §6: filtro malformado deve ser 400, nao 500).
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        String msg = "Parametro '" + ex.getName() + "' com valor invalido.";
+        ErrorResponse body = ErrorResponse.of(400, "Bad Request", msg, req.getRequestURI());
         return ResponseEntity.badRequest().body(body);
     }
 

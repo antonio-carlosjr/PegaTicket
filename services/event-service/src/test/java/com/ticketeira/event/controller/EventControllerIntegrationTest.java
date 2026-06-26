@@ -488,6 +488,31 @@ class EventControllerIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    // ---- Parametros de query/path malformados (contrato: 400, nunca 500) ----
+
+    @Test
+    void listar_tipoInvalido_retorna400() throws Exception {
+        mvc.perform(get("/events?tipo=FOO")
+                        .header("X-User-Id", PARTICIPANTE_ID))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void listar_dataSemOffset_retorna400() throws Exception {
+        // <input type="datetime-local"> envia "2026-06-20T14:00" (sem offset).
+        // Deve ser 400 tipado, nunca 500 (api-contracts.md §6).
+        mvc.perform(get("/events?de=2026-06-20T14:00")
+                        .header("X-User-Id", PARTICIPANTE_ID))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void detalhe_idNaoNumerico_retorna400() throws Exception {
+        mvc.perform(get("/events/abc")
+                        .header("X-User-Id", PARTICIPANTE_ID))
+                .andExpect(status().isBadRequest());
+    }
+
     // ---- Helpers ----
 
     private void criarEvento(String titulo, Long promotorId) throws Exception {
