@@ -308,7 +308,7 @@ export function EventoDetalhe() {
                     ? `${evento.vagasDisponiveis} vaga${evento.vagasDisponiveis !== 1 ? 's' : ''}`
                     : 'vagas'}
                 </strong>{' '}
-                disponíveis.
+                {evento.vagasDisponiveis === 1 ? 'disponível' : 'disponíveis'}.
               </p>
               <Button
                 size="lg"
