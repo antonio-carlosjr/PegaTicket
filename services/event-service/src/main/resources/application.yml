@@ -40,6 +40,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+app:
+  internal:
+    token: ${INTERNAL_TOKEN:dev-internal-secret}
+
 logging:
   level:
     com.ticketeira: DEBUG

@@ -1,11 +1,13 @@
 package com.ticketeira.event.service;
 
+import com.ticketeira.common.exception.BusinessException;
 import com.ticketeira.common.exception.NotFoundException;
 import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
 import com.ticketeira.event.dto.EventoUpdateRequest;
+import com.ticketeira.event.dto.ReservaResponse;
 import com.ticketeira.event.repository.EventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -97,6 +99,40 @@ public class EventService {
             throw new NotFoundException("Evento nao encontrado.");
         }
         return evento;
+    }
+
+    /**
+     * Decrementa vaga atomicamente (ADR-T07).
+     * Caminho quente (rowsAffected=1): retorna ReservaResponse sem findById adicional.
+     * Caminho frio (rowsAffected=0): distingue 404/422/409 via findById.
+     */
+    @Transactional
+    public ReservaResponse reservarVaga(Long eventoId) {
+        int rows = eventRepository.decrementarVaga(eventoId);
+        if (rows == 1) {
+            Evento e = eventRepository.findById(eventoId)
+                    .orElseThrow(() -> new NotFoundException("EVENTO_NAO_ENCONTRADO"));
+            return new ReservaResponse(eventoId, e.getVagasDisponiveis());
+        }
+        // Caminho frio: determina a causa
+        Evento e = eventRepository.findById(eventoId)
+                .orElseThrow(() -> new NotFoundException("EVENTO_NAO_ENCONTRADO"));
+        if (e.getStatus() != StatusEvento.PUBLICADO) {
+            throw new BusinessException("EVENTO_NAO_PUBLICADO", 422);
+        }
+        throw new BusinessException("EVENTO_ESGOTADO", 409);
+    }
+
+    /**
+     * Incrementa vaga como compensacao, limitado pela capacidade (ADR-T07).
+     * Idempotente: rowsAffected=0 por teto ou nao-publicado e no-op (200).
+     */
+    @Transactional
+    public ReservaResponse liberarVaga(Long eventoId) {
+        eventRepository.incrementarVaga(eventoId);
+        Evento e = eventRepository.findById(eventoId)
+                .orElseThrow(() -> new NotFoundException("EVENTO_NAO_ENCONTRADO"));
+        return new ReservaResponse(eventoId, e.getVagasDisponiveis());
     }
 
     /** Carrega evento e verifica ownership: se nao for do promotor, lanca 404 (nao vaza existencia). */
