@@ -19,7 +19,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
            "(:ativo IS NULL OR u.ativo = :ativo) AND " +
            "(:verificado IS NULL OR u.verificado = :verificado) AND " +
            "(:papel IS NULL OR u.papel = :papel) AND " +
-           "(:busca IS NULL OR LOWER(u.nome) LIKE LOWER(CONCAT('%', :busca, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :busca, '%')))")
+           "(CAST(:busca AS string) IS NULL OR LOWER(u.nome) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%')))")
     Page<Usuario> findComFiltros(
             @Param("ativo") Boolean ativo,
             @Param("verificado") Boolean verificado,
