@@ -7,17 +7,22 @@ import {
   Clock,
   Mail,
   PlusCircle,
+  ShieldCheck,
   Ticket,
   TrendingUp,
+  UserCog,
+  Users,
   XCircle,
 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { gatewayHealth } from '@/api/auth'
 import { meusEventos } from '@/api/events'
 import { meusIngressos, historicoInscricoes } from '@/api/tickets'
+import { listarUsuarios } from '@/api/admin'
 
 type HealthState = 'verificando' | 'UP' | 'DOWN'
 
@@ -29,6 +34,8 @@ export function Home() {
   const [qtdEventos, setQtdEventos] = useState<number | null>(null)
   const [qtdIngressos, setQtdIngressos] = useState<number | null>(null)
   const [qtdInscricoes, setQtdInscricoes] = useState<number | null>(null)
+  // Stats do admin
+  const [adminStats, setAdminStats] = useState<{ total: number; pendentes: number; promotores: number } | null>(null)
 
   useEffect(() => {
     // Status da plataforma e visivel apenas para ADMIN; so consulta health nesse caso.
@@ -46,6 +53,14 @@ export function Home() {
     } else if (user.papel === 'PARTICIPANTE') {
       meusIngressos().then((arr) => setQtdIngressos(arr.length)).catch(() => {})
       historicoInscricoes(0).then((p) => setQtdInscricoes(p.totalElements)).catch(() => {})
+    } else if (user.papel === 'ADMIN') {
+      listarUsuarios()
+        .then((us) => setAdminStats({
+          total: us.length,
+          pendentes: us.filter((u) => u.papel === 'PROMOTOR' && !u.verificado).length,
+          promotores: us.filter((u) => u.papel === 'PROMOTOR' && u.verificado).length,
+        }))
+        .catch(() => {})
     }
   }, [user])
 
@@ -76,14 +91,22 @@ export function Home() {
             {user.nome || user.email.split('@')[0]}
           </h1>
           <p className="mt-2 max-w-xl text-white/85">
-            {ehPromotor
-              ? promotorPendente
-                ? 'Seu cadastro de promotor esta em analise. Voce sera notificado por e-mail quando for aprovado.'
-                : 'Gerencie seus eventos, vendas e relatorios em um so lugar.'
-              : 'Descubra eventos, acompanhe seus ingressos e prepare-se para a proxima experiencia.'}
+            {ehAdmin
+              ? 'Gerencie usuarios, aprove promotores e acompanhe a saude da plataforma.'
+              : ehPromotor
+                ? promotorPendente
+                  ? 'Seu cadastro de promotor esta em analise. Voce sera notificado por e-mail quando for aprovado.'
+                  : 'Gerencie seus eventos, vendas e relatorios em um so lugar.'
+                : 'Descubra eventos, acompanhe seus ingressos e prepare-se para a proxima experiencia.'}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
+            {ehAdmin && (
+              <Button variant="secondary" size="lg" onClick={() => navigate('/admin/usuarios')}>
+                <UserCog className="h-4 w-4" />
+                Gerenciar usuarios
+              </Button>
+            )}
             {ehPromotor && !promotorPendente && (
               <Button variant="secondary" size="lg" onClick={() => navigate('/eventos/novo')}>
                 <PlusCircle className="h-4 w-4" />
@@ -118,26 +141,53 @@ export function Home() {
       )}
 
       {/* Cards de metricas */}
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <MetricCard
-          icon={<Ticket className="h-5 w-5" />}
-          label={ehPromotor ? 'Ingressos vendidos' : 'Meus ingressos'}
-          value={ehPromotor ? '0' : fmt(qtdIngressos)}
-          hint={ehPromotor ? 'Em breve (Sprint 4)' : 'Ingressos emitidos'}
-        />
-        <MetricCard
-          icon={<Calendar className="h-5 w-5" />}
-          label={ehPromotor ? 'Eventos ativos' : 'Eventos inscritos'}
-          value={ehPromotor ? fmt(qtdEventos) : fmt(qtdInscricoes)}
-          hint={ehPromotor ? 'Eventos que voce criou' : 'Inscricoes realizadas'}
-        />
-        <MetricCard
-          icon={<TrendingUp className="h-5 w-5" />}
-          label={ehPromotor ? 'Receita projetada' : 'Avaliacoes feitas'}
-          value={ehPromotor ? 'R$ 0,00' : '0'}
-          hint="Em construcao"
-        />
-      </section>
+      {ehAdmin ? (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            icon={<Users className="h-5 w-5" />}
+            label="Total de usuarios"
+            value={adminStats ? String(adminStats.total) : '—'}
+            hint="Ver e gerenciar todos"
+            onClick={() => navigate('/admin/usuarios')}
+          />
+          <MetricCard
+            icon={<Clock className="h-5 w-5" />}
+            label="Promotores pendentes"
+            value={adminStats ? String(adminStats.pendentes) : '—'}
+            hint={adminStats && adminStats.pendentes > 0 ? 'Aguardando sua aprovacao' : 'Nada pendente'}
+            destaque={!!adminStats && adminStats.pendentes > 0}
+            onClick={() => navigate('/admin/usuarios')}
+          />
+          <MetricCard
+            icon={<ShieldCheck className="h-5 w-5" />}
+            label="Promotores verificados"
+            value={adminStats ? String(adminStats.promotores) : '—'}
+            hint="Ativos na plataforma"
+            onClick={() => navigate('/admin/usuarios')}
+          />
+        </section>
+      ) : (
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <MetricCard
+            icon={<Ticket className="h-5 w-5" />}
+            label={ehPromotor ? 'Ingressos vendidos' : 'Meus ingressos'}
+            value={ehPromotor ? '0' : fmt(qtdIngressos)}
+            hint={ehPromotor ? 'Em breve (Sprint 4)' : 'Ingressos emitidos'}
+          />
+          <MetricCard
+            icon={<Calendar className="h-5 w-5" />}
+            label={ehPromotor ? 'Eventos ativos' : 'Eventos inscritos'}
+            value={ehPromotor ? fmt(qtdEventos) : fmt(qtdInscricoes)}
+            hint={ehPromotor ? 'Eventos que voce criou' : 'Inscricoes realizadas'}
+          />
+          <MetricCard
+            icon={<TrendingUp className="h-5 w-5" />}
+            label={ehPromotor ? 'Receita projetada' : 'Avaliacoes feitas'}
+            value={ehPromotor ? 'R$ 0,00' : '0'}
+            hint="Em construcao"
+          />
+        </section>
+      )}
 
       {/* Status da infra - apenas ADMIN */}
       {ehAdmin && (
@@ -224,21 +274,38 @@ function MetricCard({
   label,
   value,
   hint,
+  onClick,
+  destaque,
 }: {
   icon: React.ReactNode
   label: string
   value: string
   hint?: string
+  onClick?: () => void
+  destaque?: boolean
 }) {
+  const clicavel = !!onClick
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      role={clicavel ? 'button' : undefined}
+      tabIndex={clicavel ? 0 : undefined}
+      onKeyDown={clicavel ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick!() } } : undefined}
+      className={cn(
+        clicavel && 'cursor-pointer transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        destaque && 'border-warning/50 bg-warning/5'
+      )}
+    >
       <CardContent className="flex items-start justify-between p-6">
         <div>
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
-          <p className="mt-1 text-3xl font-bold tracking-tight">{value}</p>
+          <p className={cn('mt-1 text-3xl font-bold tracking-tight', destaque && 'text-warning')}>{value}</p>
           {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        <span className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+        <span className={cn(
+          'inline-flex h-10 w-10 items-center justify-center rounded-md',
+          destaque ? 'bg-warning/15 text-warning' : 'bg-primary/10 text-primary'
+        )}>
           {icon}
         </span>
       </CardContent>
