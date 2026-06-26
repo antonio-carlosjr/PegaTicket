@@ -17,7 +17,9 @@ vi.mock('@/api/auth', async () => {
 // Labels usam regex anchored para evitar conflito com aria-label do botao
 // "Mostrar senha" no PasswordInput.
 const nomeLabel = /^Nome/
-const emailLabel = /^E-mail/
+// Na aba Promotor existe tambem "E-mail de Contato"; o lookahead negativo casa o
+// campo de e-mail da conta sem casar o de contato (evita getByLabelText multiplo).
+const emailLabel = /^E-mail(?! de Contato)/
 const senhaLabel = /^Senha/
 const cpfLabel = /^CPF/
 const telefoneLabel = /^Telefone/
