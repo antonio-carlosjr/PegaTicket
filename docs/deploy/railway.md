@@ -90,6 +90,14 @@ Repita os passos abaixo para **cada um** dos 4 serviços: `user-service`, `event
    | ticket-service | `ticket_db` |
    | payment-service | `payment_db` |
 
+   **Inscrição (Sprint 3) — token interno entre `ticket` e `event` (ADR-T08):**
+   | Serviço | Variáveis adicionais |
+   |---|---|
+   | event-service | `INTERNAL_TOKEN=<gere: openssl rand -hex 24>` |
+   | ticket-service | `EVENT_SERVICE_URL=http://event-service.railway.internal:8082` **e** `INTERNAL_TOKEN=<MESMO valor>` |
+
+   > ⚠️ Sem `EVENT_SERVICE_URL`, o ticket-service cai no default `localhost:8082` (aponta pra si mesmo) → toda inscrição dá **503** (BUG-S3-01). O `INTERNAL_TOKEN` deve ser **idêntico** nos dois serviços (autoriza os endpoints `/internal/**`); divergente → 403→503. Em prod, sobrescreva o default de dev `dev-internal-secret`.
+
    **Apenas no user-service** (Resend + JWT + URLs):
    ```
    JWT_SECRET=<gerar com: openssl rand -base64 48>
