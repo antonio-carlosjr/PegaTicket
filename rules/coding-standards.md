@@ -41,7 +41,10 @@ Resources: `db/migration/V__*.sql` (Flyway), `application.yml` + `application-{d
 - **Senhas:** sempre `BCryptPasswordEncoder`. Nunca logar/serializar `senhaHash`.
 - **Erros tipados:** lançar `BusinessException(msg, status)` / `NotFoundException` / `UnauthorizedException` (de `common-lib`). `GlobalExceptionHandler` traduz para `ErrorResponse` (timestamp, status, error, message, path). **Nunca** `catch (Exception e) {}` silencioso.
 - **Param malformado → 400, nunca 500:** o `GlobalExceptionHandler` trata `MethodArgumentTypeMismatchException` (enum/número/data inválida em `@RequestParam`/`@PathVariable`). *(aprendizado Sprint 1+2: erro de input do cliente não pode virar 500)*
+- **Rota inexistente → 404, nunca 500:** o `GlobalExceptionHandler` trata `NoResourceFoundException` (Spring 6.1 cai no resource handler ao não casar rota). Sem isso o catch-all `Exception` a transforma em 500. *(aprendizado Sprint 3, CR-S3-03 — generaliza a regra acima: nenhum caminho de cliente vira 500)*
 - **Auth:** o serviço NÃO valida JWT (o gateway faz). Endpoints autenticados leem `@RequestHeader("X-User-Id") Long userId` (401 se ausente). `SecurityConfig` = csrf/cors off, STATELESS, `permitAll`.
+- **Chamada cross-service usa só o canal interno** (`/internal/**` + `X-Internal-Token`), **nunca** endpoint público user-scoped (que exige `X-User-*` — indisponível service-to-service). O endpoint interno **não** lê `X-User-*`; valida o token na borda. O gateway não roteia `/api/internal/**`. *(aprendizado Sprint 3, BUG-S3-02 + ADR-T08)*
+- **Segredo compartilhado: comparação constante-no-tempo** (`MessageDigest.isEqual(a.getBytes(UTF_8), b.getBytes(UTF_8))`, null-safe), **nunca** `String.equals` (curto-circuita → timing attack). *(aprendizado Sprint 3, CR-S3-05)*
 - **Anti-enumeração:** login e forgot-password devolvem resposta genérica (não revelar se e-mail existe).
 
 ### Persistência (Postgres + Flyway + JPA)
@@ -59,6 +62,8 @@ Resources: `db/migration/V__*.sql` (Flyway), `application.yml` + `application-{d
 | Ler-modificar-gravar | `@Lock(PESSIMISTIC_WRITE)` na query dentro de `@Transactional` |
 | Serializar por chave | `pg_advisory_xact_lock(hashtext(:key))` |
 A escolha vai no `backend-log.md`.
+
+- **Hot path não relê o banco se o corpo não é consumido:** quando o cliente descarta a resposta (`toBodilessEntity`), não pague um `SELECT`/`findById` extra na linha mais contendida — use `UPDATE ... RETURNING` ou devolva sem reconsultar. *(aprendizado Sprint 3, CR-S3-02/03)*
 
 ### Mensageria (RabbitMQ)
 - Produtor publica **após o commit** (`TransactionSynchronization.afterCommit`), nunca dentro da transação.
@@ -142,6 +147,7 @@ frontend/src/
 - `backend.yml`: `./mvnw -B -ntp verify` (JDK 21, reactor inteiro) — path filter `pom.xml`, `shared/**`, `services/**`.
 - `frontend.yml`: `npm ci && npm run build && npm run lint` (Node 20) — path filter `frontend/**`.
 - DoD de CI: ambos **verdes** no último commit antes de abrir/mergear PR.
+- **Wiring service-to-service explícito:** toda URL/`depends_on` entre serviços vai no `docker-compose`/env (o default `localhost` é armadilha dentro de container). Validar subindo o stack e exercendo o **caminho integrado** (não só `/health`) faz parte do DoD. *(aprendizado Sprint 3, BUG-S3-01 — `mvnw verify`/H2 não pega config de runtime; o smoke em Postgres real pega)*
 - Deploy manual: Railway (backend, Dockerfile builder) + Vercel (frontend).
 
 ---
