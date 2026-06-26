@@ -20,6 +20,13 @@
 - **Fix:** `71b4df2` — `@ExceptionHandler(NoResourceFoundException.class)` → **404** nos **3 serviços** (event, ticket, user — defeito compartilhado do template).
 - **Regressão:** provado ponta a ponta no smoke (T3: a rota inexistente agora dá 404). *(Teste unitário de rota-404 via MockMvc não adicionado — comportamento do resource handler varia por ambiente; o e2e em servlet real é a prova autoritativa.)*
 
+## BUG-S3-04 — `VagaConcorrenciaTest` falhava no CI (seed invisível às threads) · P1 (teste) — pego pelo CI
+- **Sintoma:** no CI (Linux, onde Testcontainers RODA), `VagaConcorrenciaTest` falhou 5/11 — `expected: 20 but was: 0` (zero sucessos nos testes concorrentes). Local sempre pulou (Docker inacessível ao Maven-JVM no Windows), então **nunca tinha rodado** — false-skip que escondia o teste quebrado.
+- **Causa:** `@DataJpaTest` envolve o método numa transação **com rollback**; o evento semeado não era commitado, então as threads worker (conexões separadas) não o enxergavam (READ COMMITTED) → todo `UPDATE ... WHERE id=...` afetava 0 linhas. Os testes single-thread passavam (mesma conexão da tx do teste). **Bug do harness, não da produção** — o smoke 14/14 já provava a query correta.
+- **Fix:** `@SpringBootTest` (não-transacional, igual ao `InscricaoConcorrenciaTest`) → seed commita e é visível às threads; **+** `@Transactional` nos `@Modifying` `decrementar/incrementarVaga` (auto-suficientes fora do service — cada chamada concorrente vira sua própria tx + row lock, modelando produção).
+- **Resultado no CI:** `VagaConcorrenciaTest` **11/11** + `InscricaoConcorrenciaTest` **6/6**, 0 skipped, em Postgres real.
+- **Lição:** "teste que nunca roda" = teste que não existe. O false-skip local foi tão enganoso quanto um false-green. O CI Linux (com Docker) é o gate real dos Testcontainers; o smoke manual cobre o caminho integrado que eles não cobrem.
+
 ## Aprendizados a promover (para `rules/coding-standards.md` via `/validar-sprint`)
 1. **Backend:** rota inexistente → **404** (handler de `NoResourceFoundException`), nunca 500. Generaliza R-S2-02.
 2. **Arquitetura:** leitura/escrita **cross-service** usa o canal **interno** (`/internal/**` + `X-Internal-Token`), **nunca** endpoints públicos user-scoped (que exigem `X-User-*`).
