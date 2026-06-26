@@ -13,3 +13,11 @@
 | # | Tipo | Fase | Hash |
 |---|---|---|---|
 | (a preencher conforme o pipeline avança) | | | |
+
+## Fase 6 — QA / Regressão (2026-06-26)
+- Reactor Maven `mvnw -B -ntp verify`: **87/87 PASS**, BUILD SUCCESS (1m10s).
+- Frontend `npm run test:run`: **50/51 PASS** — 1 falha P3 pré-existente Sprint 1 (`Register.test.tsx`).
+- Frontend `npm run build`: zero erros de tipo, built em 1.86s.
+- Smoke Postgres (11/11 documentado em `test-report.md`): Flyway V2 OK, `ddl-auto: validate` OK, `lower(bytea)` não se repete.
+- Relatórios criados: `test-report.md`, `bugs.md`, `regression-report.md`.
+- **Veredito: APROVADO PARA PO.**
