@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
@@ -21,7 +22,10 @@ public interface EventRepository extends JpaRepository<Evento, Long> {
      * Um unico UPDATE condicional: a clausula WHERE e a checagem.
      * Retorna 1 se decrementou, 0 se esgotado/nao-publicado/inexistente.
      * O row lock do Postgres serializa concorrentes na mesma linha.
+     * @Transactional para ser auto-suficiente: em prod junta-se a tx do EventService;
+     * chamado direto (ex.: teste de concorrencia), cada chamada e sua propria tx + commit.
      */
+    @Transactional
     @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE Evento e
@@ -36,6 +40,7 @@ public interface EventRepository extends JpaRepository<Evento, Long> {
      * Incremento de compensacao limitado pela capacidade (ADR-T07).
      * Retorna 1 se incrementou, 0 se ja no teto ou nao-publicado (no-op idempotente).
      */
+    @Transactional
     @Modifying(clearAutomatically = true)
     @Query("""
             UPDATE Evento e
