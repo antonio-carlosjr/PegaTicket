@@ -40,6 +40,7 @@ Resources: `db/migration/V__*.sql` (Flyway), `application.yml` + `application-{d
 - **Service** carrega a regra; controller é fino. `@Transactional` no service; `readOnly = true` em leitura.
 - **Senhas:** sempre `BCryptPasswordEncoder`. Nunca logar/serializar `senhaHash`.
 - **Erros tipados:** lançar `BusinessException(msg, status)` / `NotFoundException` / `UnauthorizedException` (de `common-lib`). `GlobalExceptionHandler` traduz para `ErrorResponse` (timestamp, status, error, message, path). **Nunca** `catch (Exception e) {}` silencioso.
+- **Param malformado → 400, nunca 500:** o `GlobalExceptionHandler` trata `MethodArgumentTypeMismatchException` (enum/número/data inválida em `@RequestParam`/`@PathVariable`). *(aprendizado Sprint 1+2: erro de input do cliente não pode virar 500)*
 - **Auth:** o serviço NÃO valida JWT (o gateway faz). Endpoints autenticados leem `@RequestHeader("X-User-Id") Long userId` (401 se ausente). `SecurityConfig` = csrf/cors off, STATELESS, `permitAll`.
 - **Anti-enumeração:** login e forgot-password devolvem resposta genérica (não revelar se e-mail existe).
 
@@ -86,6 +87,7 @@ frontend/src/
 ### Regras
 - **TS strict, zero `any`.** Sem `console.log` em PR.
 - **Formulários:** `react-hook-form` + `zodResolver`, schema em `lib/validation.ts`. Erro do back mapeado pro campo.
+- **Datas:** `<input type="datetime-local">` gera valor **sem offset** — converter para ISO **com offset** (`new Date(v).toISOString()`) antes de enviar, em **formulários E filtros** (o back `OffsetDateTime` rejeita sem offset → 500). *(aprendizado Sprint 2, CR-S2-01)*
 - **HTTP:** sempre via `api/client.ts` (axios, baseURL `VITE_API_URL`, interceptor injeta `Authorization: Bearer`). Sem `fetch` solto. Funções por feature em `api/<feature>.ts`, tipadas.
 - **Token** no `localStorage['ticketeira.token']` (padrão atual do projeto). Sessão derivada via `useAuth`.
 - **Estados de UI explícitos:** loading (spinner/skeleton sem layout shift), empty (com CTA), error (mensagem clara, nunca "algo deu errado" cru), success (toast `sonner`).
