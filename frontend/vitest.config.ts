@@ -10,6 +10,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        // Nao usar localstorage-file (causa localStorage.getItem is not a function)
+        storageQuota: 10000000,
+      },
+    },
     setupFiles: ['./src/test/setup.ts'],
     css: false,
   },

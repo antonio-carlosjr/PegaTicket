@@ -11,10 +11,10 @@
 ## Épico A — Eventos (event-service) · RF02, RF08
 | ID | História | Estado |
 |---|---|---|
-| US-020 | Como promotor verificado, quero criar um evento (gratuito ou pago) para abrir inscrições | SPRINT-2 |
-| US-021 | Como promotor, quero editar/publicar/cancelar meu evento para gerir a oferta | SPRINT-2 |
-| US-022 | Como participante, quero listar/buscar eventos publicados para escolher onde ir | SPRINT-2 |
-| US-023 | Como participante, quero ver o detalhe de um evento (vagas, preço, data) | SPRINT-2 |
+| US-020 | Como promotor verificado, quero criar um evento (gratuito ou pago) para abrir inscrições | DONE |
+| US-021 | Como promotor, quero editar/publicar/cancelar meu evento para gerir a oferta | DONE |
+| US-022 | Como participante, quero listar/buscar eventos publicados para escolher onde ir | DONE |
+| US-023 | Como participante, quero ver o detalhe de um evento (vagas, preço, data) | DONE |
 | US-024 | Como participante, quero avaliar um evento que participei (nota 1-5) | BACKLOG |
 | US-025 | Como promotor, quero ver a reputação (média de avaliações) do meu evento | BACKLOG |
 
@@ -39,11 +39,11 @@
 ## Épico D — Identidade (user-service) · dívidas conhecidas
 | ID | História | Estado |
 |---|---|---|
-| US-050 | Como admin, quero aprovar/rejeitar promotores pendentes (tela + endpoint protegido) | SPRINT-1 |
-| US-051 | Como sistema, quero que o papel trafegue no token/header para autorização real (fecha dívida ADR) | SPRINT-1 |
-| US-052 | Como promotor, quero me cadastrar com perfil completo (CPF, telefone, e-mail de contato, endereço, redes sociais) para ser avaliado pelo admin | SPRINT-1 |
-| US-053 | Como admin, quero ativar/inativar usuários para controlar o acesso à plataforma | SPRINT-1 |
-| US-054 | Como promotor avaliado, quero receber e-mail de aprovação/rejeição (com motivo) e, se rejeitado, seguir usando como participante e poder reenviar a solicitação | SPRINT-1 |
+| US-050 | Como admin, quero aprovar/rejeitar promotores pendentes (tela + endpoint protegido) | DONE |
+| US-051 | Como sistema, quero que o papel trafegue no token/header para autorização real (fecha dívida ADR) | DONE |
+| US-052 | Como promotor, quero me cadastrar com perfil completo (CPF, telefone, e-mail de contato, endereço, redes sociais) para ser avaliado pelo admin | DONE |
+| US-053 | Como admin, quero ativar/inativar usuários para controlar o acesso à plataforma | DONE |
+| US-054 | Como promotor avaliado, quero receber e-mail de aprovação/rejeição (com motivo) e, se rejeitado, seguir usando como participante e poder reenviar a solicitação | DONE |
 
 ## Épico E — Plataforma · RNF09
 | ID | História | Estado |
