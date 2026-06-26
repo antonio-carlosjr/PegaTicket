@@ -1,6 +1,6 @@
 package com.ticketeira.user.controller;
 
-import com.ticketeira.common.exception.UnauthorizedException;
+import com.ticketeira.common.exception.BusinessException;
 import com.ticketeira.user.dto.RejeicaoRequest;
 import com.ticketeira.user.service.AdminService;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,7 @@ public class AdminController {
 
     private void requireAdmin(String papel) {
         if (!"ADMIN".equals(papel)) {
-            throw new UnauthorizedException("Acesso restrito a administradores.");
+            throw new BusinessException("Acesso restrito a administradores.", 403);
         }
     }
 
