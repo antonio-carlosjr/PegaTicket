@@ -109,9 +109,20 @@ export function AdminUsuarios() {
                 <td className="px-6 py-4">{u.email}</td>
                 <td className="px-6 py-4">{u.papel}</td>
                 <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded text-xs ${u.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {u.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
+                  <div className="flex flex-col items-start gap-1">
+                    <span className={`px-2 py-1 rounded text-xs ${u.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {u.ativo ? 'Ativo' : 'Inativo'}
+                    </span>
+                    {u.statusPerfil === 'PENDENTE' && (
+                      <span className="px-2 py-1 rounded text-xs bg-amber-100 text-amber-800 font-medium">Promotor pendente</span>
+                    )}
+                    {u.statusPerfil === 'VERIFICADO' && (
+                      <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">Verificado</span>
+                    )}
+                    {u.statusPerfil === 'REJEITADO' && (
+                      <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-700">Rejeitado</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4 flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => abrirDetalhes(u.id)}>Detalhes</Button>
