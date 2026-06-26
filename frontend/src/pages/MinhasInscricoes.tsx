@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Calendar, ClipboardList } from 'lucide-react'
 import { historicoInscricoes, type InscricaoHistoricoResponse } from '@/api/tickets'
+import { detalheEvento } from '@/api/events'
 import { extractApiError } from '@/api/auth'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -35,6 +36,7 @@ function badgeStatusInscricao(status: string) {
 
 export function MinhasInscricoes() {
   const [inscricoes, setInscricoes] = useState<InscricaoHistoricoResponse[]>([])
+  const [nomesEventos, setNomesEventos] = useState<Record<number, string>>({})
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
   const [page, setPage] = useState(0)
@@ -50,6 +52,16 @@ export function MinhasInscricoes() {
       setTotalPages(resp.totalPages)
       setTotalElements(resp.totalElements)
       setPage(resp.number)
+      // Compoe o nome do evento (dedup por eventoId) EM BACKGROUND — best-effort:
+      // nao bloqueia o loading nem a lista (renderiza com fallback "Evento #id" e
+      // atualiza pro titulo quando os detalhes chegam).
+      const ids = [...new Set(resp.content.map((i) => i.eventoId))]
+      void Promise.all(
+        ids.map(async (id) => {
+          try { return [id, (await detalheEvento(id)).titulo] as const }
+          catch { return [id, ''] as const }
+        })
+      ).then((pares) => setNomesEventos(Object.fromEntries(pares.filter(([, titulo]) => titulo))))
     } catch (e) {
       const msg = extractApiError(e, 'Não foi possível carregar o histórico de inscrições.')
       setErro(msg)
@@ -107,7 +119,7 @@ export function MinhasInscricoes() {
 
           <div className="space-y-3">
             {inscricoes.map((ins) => (
-              <InscricaoItem key={ins.id} inscricao={ins} />
+              <InscricaoItem key={ins.id} inscricao={ins} nomeEvento={nomesEventos[ins.eventoId]} />
             ))}
           </div>
 
@@ -145,7 +157,7 @@ export function MinhasInscricoes() {
 
 // ─── Item individual ──────────────────────────────────────────────────────────
 
-function InscricaoItem({ inscricao }: { inscricao: InscricaoHistoricoResponse }) {
+function InscricaoItem({ inscricao, nomeEvento }: { inscricao: InscricaoHistoricoResponse; nomeEvento?: string }) {
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-4 p-4">
@@ -153,10 +165,10 @@ function InscricaoItem({ inscricao }: { inscricao: InscricaoHistoricoResponse })
           <ClipboardList className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
           <div className="space-y-1">
             <p className="text-sm font-medium text-foreground">
-              Inscrição #{inscricao.id}
+              {nomeEvento ?? `Evento #${inscricao.eventoId}`}
             </p>
             <p className="text-xs text-muted-foreground">
-              Evento #{inscricao.eventoId}
+              Inscrição #{inscricao.id}
             </p>
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Calendar className="h-3.5 w-3.5" />

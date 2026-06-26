@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Activity,
   Calendar,
@@ -15,12 +16,19 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { gatewayHealth } from '@/api/auth'
+import { meusEventos } from '@/api/events'
+import { meusIngressos, historicoInscricoes } from '@/api/tickets'
 
 type HealthState = 'verificando' | 'UP' | 'DOWN'
 
 export function Home() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [health, setHealth] = useState<HealthState>('verificando')
+  // Contagens reais (null = ainda carregando → mostra "—")
+  const [qtdEventos, setQtdEventos] = useState<number | null>(null)
+  const [qtdIngressos, setQtdIngressos] = useState<number | null>(null)
+  const [qtdInscricoes, setQtdInscricoes] = useState<number | null>(null)
 
   useEffect(() => {
     // Status da plataforma e visivel apenas para ADMIN; so consulta health nesse caso.
@@ -30,11 +38,23 @@ export function Home() {
       .catch(() => setHealth('DOWN'))
   }, [user])
 
+  useEffect(() => {
+    if (!user) return
+    // Promotor verificado: total de eventos criados. Participante: ingressos + inscricoes.
+    if (user.papel === 'PROMOTOR' && user.verificado) {
+      meusEventos({ page: 0, size: 1 }).then((p) => setQtdEventos(p.totalElements)).catch(() => {})
+    } else if (user.papel === 'PARTICIPANTE') {
+      meusIngressos().then((arr) => setQtdIngressos(arr.length)).catch(() => {})
+      historicoInscricoes(0).then((p) => setQtdInscricoes(p.totalElements)).catch(() => {})
+    }
+  }, [user])
+
   if (!user) return null
 
   const ehPromotor = user.papel === 'PROMOTOR'
   const ehAdmin = user.papel === 'ADMIN'
   const promotorPendente = ehPromotor && !user.verificado
+  const fmt = (n: number | null) => (n === null ? '—' : String(n))
 
   return (
     <div className="space-y-8">
@@ -65,7 +85,7 @@ export function Home() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             {ehPromotor && !promotorPendente && (
-              <Button variant="secondary" size="lg">
+              <Button variant="secondary" size="lg" onClick={() => navigate('/eventos/novo')}>
                 <PlusCircle className="h-4 w-4" />
                 Criar evento
               </Button>
@@ -74,6 +94,7 @@ export function Home() {
               variant="outline"
               size="lg"
               className="border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              onClick={() => navigate('/eventos')}
             >
               <Calendar className="h-4 w-4" />
               Explorar eventos
@@ -101,20 +122,20 @@ export function Home() {
         <MetricCard
           icon={<Ticket className="h-5 w-5" />}
           label={ehPromotor ? 'Ingressos vendidos' : 'Meus ingressos'}
-          value="0"
-          hint="Atualizado em tempo real"
+          value={ehPromotor ? '0' : fmt(qtdIngressos)}
+          hint={ehPromotor ? 'Em breve (Sprint 4)' : 'Ingressos emitidos'}
         />
         <MetricCard
           icon={<Calendar className="h-5 w-5" />}
           label={ehPromotor ? 'Eventos ativos' : 'Eventos inscritos'}
-          value="0"
-          hint="Nenhum evento ainda"
+          value={ehPromotor ? fmt(qtdEventos) : fmt(qtdInscricoes)}
+          hint={ehPromotor ? 'Eventos que voce criou' : 'Inscricoes realizadas'}
         />
         <MetricCard
           icon={<TrendingUp className="h-5 w-5" />}
           label={ehPromotor ? 'Receita projetada' : 'Avaliacoes feitas'}
           value={ehPromotor ? 'R$ 0,00' : '0'}
-          hint="Em construcao - Sprint 1"
+          hint="Em construcao"
         />
       </section>
 
