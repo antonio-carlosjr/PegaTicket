@@ -35,7 +35,10 @@ export type UsuarioDetalhe = UsuarioAdmin & {
 }
 
 export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
-  const { data } = await api.get<{ content: UsuarioAdmin[] }>('/api/users')
+  // A tela de admin nao pagina na UI: busca todos de uma vez (size alto cobre a base
+  // atual). O default do backend e 20 — sem isto, usuarios alem do 20o sumiam da lista
+  // e da contagem de pendentes na home.
+  const { data } = await api.get<{ content: UsuarioAdmin[] }>('/api/users', { params: { size: 1000 } })
   return data.content
 }
 
