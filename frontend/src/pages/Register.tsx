@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, User, IdCard, Phone, Sparkles, BadgeCheck } from 'lucide-react'
+import { Mail, User, IdCard, Phone, Sparkles, BadgeCheck, Loader2, MapPin } from 'lucide-react'
+import { consultarCep } from '@/lib/viacep'
 import { AuthLayout } from '@/components/AuthLayout'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -143,11 +144,46 @@ function FormPromotor({ onSuccess }: { onSuccess: (email: string, senha: string)
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RegisterPromotorValues>({
     resolver: zodResolver(registerPromotorSchema),
     defaultValues: { nome: '', email: '', senha: '', cpf: '', telefone: '', emailContato: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', website: '' },
   })
+
+  // ── ViaCEP: ao completar o CEP, busca e preenche/trava o endereco ──────────────
+  // 'ok' = encontrado (campos travados); 'notfound' = preencher manualmente.
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'ok' | 'notfound'>('idle')
+  const ultimoCep = useRef('')
+  const enderecoTravado = cepStatus === 'ok'
+
+  async function handleCep(valor: string) {
+    const digitos = valor.replace(/\D/g, '')
+    if (digitos.length !== 8) {
+      setCepStatus('idle')
+      ultimoCep.current = ''
+      return
+    }
+    if (digitos === ultimoCep.current) return
+    ultimoCep.current = digitos
+    setCepStatus('loading')
+    const end = await consultarCep(digitos)
+    if (!end) {
+      // Nao encontrado: libera os campos para preenchimento manual.
+      setCepStatus('notfound')
+      return
+    }
+    setValue('logradouro', end.logradouro, { shouldValidate: true })
+    setValue('bairro', end.bairro, { shouldValidate: true })
+    setValue('cidade', end.localidade, { shouldValidate: true })
+    setValue('uf', end.uf, { shouldValidate: true })
+    if (end.complemento) setValue('complemento', end.complemento)
+    setCepStatus('ok')
+  }
+
+  const enderecoProps = enderecoTravado
+    ? { readOnly: true, className: 'bg-muted text-muted-foreground cursor-not-allowed', tabIndex: -1 }
+    : {}
 
   async function onSubmit(values: RegisterPromotorValues) {
     try {
@@ -243,18 +279,41 @@ function FormPromotor({ onSuccess }: { onSuccess: (email: string, senha: string)
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <FormField label="CEP" htmlFor="cep" error={errors.cep}>
+        <FormField
+          label="CEP"
+          htmlFor="cep"
+          error={errors.cep}
+          hint={
+            cepStatus === 'loading'
+              ? 'Buscando endereco...'
+              : cepStatus === 'notfound'
+                ? 'CEP nao encontrado — preencha manualmente.'
+                : cepStatus === 'ok'
+                  ? 'Endereco preenchido pelo CEP.'
+                  : undefined
+          }
+        >
           <Controller
             name="cep"
             control={control}
             render={({ field }) => (
-              <MaskedInput id="cep" mask="00000-000" placeholder="00000-000" invalid={!!errors.cep} value={field.value || ''} onValueChange={field.onChange} onBlur={field.onBlur} name={field.name} />
+              <MaskedInput
+                id="cep"
+                mask="00000-000"
+                placeholder="00000-000"
+                leftIcon={cepStatus === 'loading' ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+                invalid={!!errors.cep}
+                value={field.value || ''}
+                onValueChange={(v) => { field.onChange(v); void handleCep(v) }}
+                onBlur={field.onBlur}
+                name={field.name}
+              />
             )}
           />
         </FormField>
         <div className="sm:col-span-2">
           <FormField label="Logradouro" htmlFor="logradouro" error={errors.logradouro}>
-            <Input id="logradouro" placeholder="Rua, Avenida..." invalid={!!errors.logradouro} {...register('logradouro')} />
+            <Input id="logradouro" placeholder="Rua, Avenida..." invalid={!!errors.logradouro} {...register('logradouro')} {...enderecoProps} />
           </FormField>
         </div>
       </div>
@@ -272,13 +331,13 @@ function FormPromotor({ onSuccess }: { onSuccess: (email: string, senha: string)
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
         <FormField label="Bairro" htmlFor="bairro" error={errors.bairro}>
-          <Input id="bairro" placeholder="Bairro" invalid={!!errors.bairro} {...register('bairro')} />
+          <Input id="bairro" placeholder="Bairro" invalid={!!errors.bairro} {...register('bairro')} {...enderecoProps} />
         </FormField>
         <FormField label="Cidade" htmlFor="cidade" error={errors.cidade}>
-          <Input id="cidade" placeholder="Cidade" invalid={!!errors.cidade} {...register('cidade')} />
+          <Input id="cidade" placeholder="Cidade" invalid={!!errors.cidade} {...register('cidade')} {...enderecoProps} />
         </FormField>
         <FormField label="UF" htmlFor="uf" error={errors.uf}>
-          <Input id="uf" placeholder="SP" invalid={!!errors.uf} maxLength={2} {...register('uf')} />
+          <Input id="uf" placeholder="SP" invalid={!!errors.uf} maxLength={2} {...register('uf')} {...enderecoProps} />
         </FormField>
       </div>
 
