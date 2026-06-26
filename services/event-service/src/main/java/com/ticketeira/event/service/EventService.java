@@ -6,6 +6,7 @@ import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
+import com.ticketeira.event.dto.EventoInternoResponse;
 import com.ticketeira.event.dto.EventoUpdateRequest;
 import com.ticketeira.event.dto.ReservaResponse;
 import com.ticketeira.event.repository.EventRepository;
@@ -99,6 +100,17 @@ public class EventService {
             throw new NotFoundException("Evento nao encontrado.");
         }
         return evento;
+    }
+
+    /**
+     * Resumo para validacao interna da inscricao (ticket-service).
+     * Sem checagem de ownership/usuario: a autorizacao e o X-Internal-Token na borda (InternalEventController).
+     */
+    @Transactional(readOnly = true)
+    public EventoInternoResponse resumoInterno(Long eventoId) {
+        Evento evento = eventRepository.findById(eventoId)
+                .orElseThrow(() -> new NotFoundException("EVENTO_NAO_ENCONTRADO"));
+        return EventoInternoResponse.from(evento);
     }
 
     /**

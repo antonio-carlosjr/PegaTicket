@@ -33,7 +33,7 @@ public class EventClient {
     public EventResumo getEvento(Long eventoId) {
         try {
             return restClient.get()
-                    .uri("/events/{id}", eventoId)
+                    .uri("/internal/events/{id}", eventoId)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
                         if (resp.getStatusCode().value() == 404) {

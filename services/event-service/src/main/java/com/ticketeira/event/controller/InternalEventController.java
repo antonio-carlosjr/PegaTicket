@@ -6,6 +6,7 @@ import com.ticketeira.event.service.EventService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -28,6 +29,22 @@ public class InternalEventController {
                                    @Value("${app.internal.token}") String internalToken) {
         this.eventService = eventService;
         this.internalToken = internalToken;
+    }
+
+    /**
+     * GET /internal/events/{id} — resumo do evento para a validacao da inscricao (ticket-service).
+     * Substitui o detalhe publico (GET /events/{id}), que exige X-User-Id (indisponivel service-to-service).
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<?> resumo(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Internal-Token", required = false) String token,
+            HttpServletRequest req) {
+        if (!internalToken.equals(token)) {
+            return ResponseEntity.status(403)
+                    .body(ErrorResponse.of(403, "Forbidden", "ACESSO_INTERNO_NEGADO", req.getRequestURI()));
+        }
+        return ResponseEntity.ok(eventService.resumoInterno(id));
     }
 
     /** POST /internal/events/{id}/reservar-vaga — decremento atomico de vagas. */
