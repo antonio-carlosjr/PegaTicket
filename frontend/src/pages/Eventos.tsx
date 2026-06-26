@@ -29,6 +29,18 @@ function formatarPreco(preco: string | null): string {
   return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+/**
+ * `<input type="datetime-local">` produz "2026-06-20T14:00" (sem offset).
+ * O backend bind para OffsetDateTime exige offset — enviar sem offset resulta em 500.
+ * Converte para ISO-8601 com offset no fuso do usuario antes de mandar pra API.
+ */
+function localParaIso(local: string): string | undefined {
+  if (!local) return undefined
+  const d = new Date(local)
+  if (isNaN(d.getTime())) return undefined
+  return d.toISOString()
+}
+
 export function Eventos() {
   const [searchParams, setSearchParams] = useSearchParams()
 
@@ -58,8 +70,8 @@ export function Eventos() {
       const resp = await listarEventos({
         q: q || undefined,
         tipo: (tipo as TipoEvento) || undefined,
-        de: de || undefined,
-        ate: ate || undefined,
+        de: localParaIso(de),
+        ate: localParaIso(ate),
         page,
         size: PAGE_SIZE,
       })

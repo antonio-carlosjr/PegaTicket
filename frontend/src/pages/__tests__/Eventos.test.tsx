@@ -70,4 +70,24 @@ describe('<Eventos>', () => {
       expect(screen.getByText(/nenhum evento encontrado/i)).toBeInTheDocument()
     })
   })
+
+  // Regressao P1: o filtro de data vinha de <input type="datetime-local"> sem offset
+  // ("2026-06-20T14:00") e era enviado cru → backend respondia 500. Deve ir como ISO offset.
+  it('converte filtro de data (datetime-local) para ISO com offset antes de chamar a API', async () => {
+    vi.mocked(eventsApi.listarEventos).mockResolvedValue(paginaVazia)
+
+    renderWithProviders(<Eventos />, {
+      routerProps: { initialEntries: ['/eventos?de=2026-06-20T14:00'] },
+    })
+
+    await waitFor(() => {
+      expect(eventsApi.listarEventos).toHaveBeenCalled()
+    })
+
+    const arg = vi.mocked(eventsApi.listarEventos).mock.calls[0][0]
+    expect(arg?.de).toBeDefined()
+    // ISO offset: termina em Z ou tem +HH:MM / -HH:MM. O valor cru "2026-06-20T14:00" nao tem.
+    expect(arg?.de).toMatch(/(Z|[+-]\d{2}:\d{2})$/)
+    expect(arg?.de).not.toBe('2026-06-20T14:00')
+  })
 })
