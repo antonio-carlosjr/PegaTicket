@@ -6,14 +6,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -34,14 +31,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Testes de concorrencia em POSTGRES REAL (Testcontainers).
  * H2 nao reproduz fielmente o row lock do UPDATE...WHERE sob concorrencia — gate inegociavel.
  *
- * Se Docker nao estiver disponivel (ex.: ambiente CI sem Docker ou Docker Desktop no Windows
- * com configuracao de pipe incompativel), os testes sao PULADOS (@DisabledIf).
- * Para rodar: garantir que Docker esta acessivel via Testcontainers.
+ * Usa @SpringBootTest (NAO @DataJpaTest): o teste precisa ser NAO-transacional para que o
+ * evento semeado seja COMMITADO e visivel as threads worker (conexoes separadas do pool).
+ * Com a transacao de rollback do @DataJpaTest, o seed ficava invisivel e todo decremento
+ * concorrente afetava 0 linhas (0 sucessos). Mesmo padrao do InscricaoConcorrenciaTest.
+ *
+ * Pulados automaticamente se Docker nao estiver disponivel (disabledWithoutDocker=true).
  */
 @Tag("concorrencia")
 @Testcontainers(disabledWithoutDocker = true)
-@DataJpaTest
-@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@SpringBootTest
 @ActiveProfiles("test-postgres")
 class VagaConcorrenciaTest {
 
@@ -56,7 +55,7 @@ class VagaConcorrenciaTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration");
         registry.add("spring.autoconfigure.exclude",
