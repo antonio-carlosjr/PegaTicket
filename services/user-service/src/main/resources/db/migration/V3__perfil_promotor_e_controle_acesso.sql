@@ -11,7 +11,7 @@ ALTER TABLE perfis_verificados
   ADD COLUMN complemento     VARCHAR(80),
   ADD COLUMN bairro          VARCHAR(80),
   ADD COLUMN cidade          VARCHAR(80),
-  ADD COLUMN uf              CHAR(2),
+  ADD COLUMN uf              VARCHAR(2),
   ADD COLUMN instagram       VARCHAR(80),
   ADD COLUMN website         VARCHAR(200),
   ADD COLUMN motivo_rejeicao VARCHAR(300);
@@ -22,5 +22,5 @@ ALTER TABLE perfis_verificados
 -- Seed ADMIN idempotente
 -- senha dev: Admin@123
 INSERT INTO usuarios (nome, email, senha_hash, papel, verificado, ativo, criado_em)
-VALUES ('Administrador', 'admin@pegaticket.local', '$2a$10$vI8aWN1Vamcg3zlL1yNdL.L/oX.aD6jG9mN/f6T5yA0l4I/U8z3Oq', 'ADMIN', TRUE, TRUE, NOW())
+VALUES ('Administrador', 'admin@pegaticket.local', '$2a$10$mG.B3dEQCk/Wm0jtRkkJRuIhbN9CBHqvf5cGV51wx/Qsd2vMSPQye', 'ADMIN', TRUE, TRUE, NOW())
 ON CONFLICT (email) DO NOTHING;
