@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Calendar,
@@ -7,15 +7,19 @@ import {
   Image as ImageIcon,
   MapPin,
   Tag,
+  Ticket,
   Users,
 } from 'lucide-react'
 import { detalheEvento, type EventoResponse } from '@/api/events'
 import { extractApiError } from '@/api/auth'
+import { inscrever, type InscricaoResponse } from '@/api/tickets'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { buttonVariants } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { PageLoader } from '@/components/ui/spinner'
+import { toast } from '@/components/ui/toaster'
+import { QRCodeSVG } from 'qrcode.react'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,13 +58,30 @@ function vagasTexto(vagas: number | null, status: EventoResponse['status']): str
   return `${vagas} vaga${vagas !== 1 ? 's' : ''} disponível`
 }
 
+// ─── Mapeamento de erros da inscrição ─────────────────────────────────────────
+
+function mensagemErroInscricao(err: unknown): string {
+  const codigo = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+  if (!codigo) return extractApiError(err, 'Não foi possível realizar a inscrição.')
+
+  if (codigo.startsWith('JA_INSCRITO')) return 'Você já está inscrito neste evento.'
+  if (codigo.startsWith('EVENTO_ESGOTADO')) return 'Não há mais vagas disponíveis.'
+  if (codigo.startsWith('EVENTO_NAO_PUBLICADO')) return 'Evento não disponível para inscrição.'
+  if (codigo.startsWith('EVENTO_PAGO_NAO_SUPORTADO')) return 'Inscrição em eventos pagos ainda não disponível.'
+  if (codigo.startsWith('EVENTO_INDISPONIVEL')) return 'Serviço temporariamente indisponível. Tente novamente em instantes.'
+  return extractApiError(err, 'Não foi possível realizar a inscrição.')
+}
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export function EventoDetalhe() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [evento, setEvento] = useState<EventoResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
+  const [inscrevendo, setInscrevendo] = useState(false)
+  const [inscricao, setInscricao] = useState<InscricaoResponse | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -89,6 +110,22 @@ export function EventoDetalhe() {
     return () => { cancelled = true }
   }, [id])
 
+  async function handleInscrever() {
+    if (!evento) return
+    setInscrevendo(true)
+    try {
+      const resultado = await inscrever(evento.id)
+      setInscricao(resultado)
+      toast.success('Inscrição confirmada!', {
+        description: 'Seu ingresso foi gerado com sucesso.',
+      })
+    } catch (e) {
+      toast.error('Erro na inscrição', { description: mensagemErroInscricao(e) })
+    } finally {
+      setInscrevendo(false)
+    }
+  }
+
   if (loading) return <PageLoader label="Carregando evento..." />
 
   if (erro) {
@@ -109,6 +146,12 @@ export function EventoDetalhe() {
   if (!evento) return null
 
   const ehCancelado = evento.status === 'CANCELADO'
+  const podeInscrever =
+    evento.tipo === 'GRATUITO' &&
+    evento.status === 'PUBLICADO' &&
+    (evento.vagasDisponiveis === null || evento.vagasDisponiveis > 0)
+
+  const eventoPago = evento.tipo === 'PAGO'
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -221,10 +264,77 @@ export function EventoDetalhe() {
         </Card>
       )}
 
-      {/* Nota Sprint 3 */}
-      <p className="text-center text-xs text-muted-foreground">
-        Inscrições disponíveis em breve — Sprint 3.
-      </p>
+      {/* Ingresso gerado (após inscrição bem-sucedida) */}
+      {inscricao && (
+        <Card className="border-success/40 bg-success/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg text-success">
+              <Ticket className="h-5 w-5" />
+              Inscrição confirmada!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <div className="rounded-lg bg-white p-4 shadow-sm" aria-label="QR code do ingresso">
+              <QRCodeSVG
+                value={inscricao.ingresso.codigoUnico}
+                size={200}
+                level="M"
+              />
+            </div>
+            <p className="text-center text-sm text-muted-foreground">
+              Apresente este QR code na entrada do evento.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/meus-ingressos')}
+            >
+              <Ticket className="h-4 w-4" />
+              Ver todos os meus ingressos
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* CTA de inscrição */}
+      {!inscricao && (
+        <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-6 text-center">
+          {podeInscrever && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Evento gratuito com{' '}
+                <strong>
+                  {evento.vagasDisponiveis !== null
+                    ? `${evento.vagasDisponiveis} vaga${evento.vagasDisponiveis !== 1 ? 's' : ''}`
+                    : 'vagas'}
+                </strong>{' '}
+                disponíveis.
+              </p>
+              <Button
+                size="lg"
+                onClick={handleInscrever}
+                disabled={inscrevendo}
+                aria-label="Inscrever-se neste evento"
+              >
+                <Ticket className="h-4 w-4" />
+                {inscrevendo ? 'Inscrevendo...' : 'Inscrever-se'}
+              </Button>
+            </>
+          )}
+
+          {eventoPago && (
+            <p className="text-sm text-muted-foreground">
+              Inscrições pagas disponíveis em breve.
+            </p>
+          )}
+
+          {!podeInscrever && !eventoPago && evento.status === 'PUBLICADO' && evento.vagasDisponiveis === 0 && (
+            <p className="font-medium text-destructive">
+              Não há mais vagas disponíveis para este evento.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

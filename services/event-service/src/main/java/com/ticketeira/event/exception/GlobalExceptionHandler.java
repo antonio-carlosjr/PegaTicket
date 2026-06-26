@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -64,6 +65,17 @@ public class GlobalExceptionHandler {
         ErrorResponse body = ErrorResponse.of(409, "Conflict",
                 "Operacao resultou em conflito de dados.", req.getRequestURI());
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    /**
+     * Rota inexistente: o Spring 6.1 cai no resource handler e lanca NoResourceFoundException.
+     * Sem este handler, o generico abaixo a transforma em 500. Rota desconhecida e erro de
+     * cliente → 404 (mesma regra de "input do cliente nunca vira 500" do type-mismatch acima).
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResource(NoResourceFoundException ex, HttpServletRequest req) {
+        ErrorResponse body = ErrorResponse.of(404, "Not Found", "Recurso nao encontrado.", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
     }
 
     @ExceptionHandler(Exception.class)

@@ -150,6 +150,8 @@ services:
       RABBIT_HOST: rabbitmq
       RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
       RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+      # Segredo compartilhado dos endpoints internos (/internal/**). Deve casar com a ticket-service.
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-secret}
     ports:
       - "${EVENT_SERVICE_PORT:-8082}:8082"
     depends_on:
@@ -178,11 +180,16 @@ services:
       RABBIT_HOST: rabbitmq
       RABBIT_USER: ${RABBITMQ_USER:-ticketeira}
       RABBIT_PASS: ${RABBITMQ_PASS:-ticketeira}
+      # Saga de inscrição chama o event-service (reservar/liberar-vaga) na rede do compose.
+      # Sem isto, o default localhost:8082 apontaria pra própria ticket-service → 503.
+      EVENT_SERVICE_URL: http://event-service:8082
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:-dev-internal-secret}
     ports:
       - "${TICKET_SERVICE_PORT:-8083}:8083"
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
+      event-service: { condition: service_healthy }
     networks: [ticketeira-net]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://localhost:8083/actuator/health | grep -q UP"]

@@ -14,3 +14,9 @@ spring:
         dialect: org.hibernate.dialect.H2Dialect
   flyway:
     enabled: false
+
+app:
+  event-service:
+    url: http://localhost:8082
+  internal:
+    token: test-internal-secret
