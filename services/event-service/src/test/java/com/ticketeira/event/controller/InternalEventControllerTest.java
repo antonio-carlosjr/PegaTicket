@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,6 +46,37 @@ class InternalEventControllerTest {
     @BeforeEach
     void limpar() {
         eventRepository.deleteAll();
+    }
+
+    // ---- Resumo interno (GET /internal/events/{id}) ----
+
+    @Test
+    void resumo_semToken_retorna403() throws Exception {
+        Long id = criarEventoPublicado(10);
+        mvc.perform(get("/internal/events/{id}", id))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("ACESSO_INTERNO_NEGADO"));
+    }
+
+    @Test
+    void resumo_tokenCorreto_retorna200ComCampos() throws Exception {
+        Long id = criarEventoPublicado(10);
+        mvc.perform(get("/internal/events/{id}", id)
+                        .header("X-Internal-Token", TOKEN_OK))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.tipo").value("GRATUITO"))
+                .andExpect(jsonPath("$.status").value("PUBLICADO"))
+                .andExpect(jsonPath("$.vagasDisponiveis").value(10))
+                .andExpect(jsonPath("$.capacidade").value(10));
+    }
+
+    @Test
+    void resumo_inexistente_retorna404() throws Exception {
+        mvc.perform(get("/internal/events/{id}", 99999L)
+                        .header("X-Internal-Token", TOKEN_OK))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("EVENTO_NAO_ENCONTRADO"));
     }
 
     // ---- A6: Autorizacao interna ----
