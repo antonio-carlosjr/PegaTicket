@@ -14,6 +14,10 @@ import org.springframework.data.domain.Pageable;
 import com.ticketeira.user.domain.Papel;
 import com.ticketeira.user.dto.UsuarioResponse;
 
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 @Service
 public class AdminService {
 
@@ -31,7 +35,13 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public Page<UsuarioResponse> listarTodos(Boolean ativo, Boolean verificado, Papel papel, String busca, Pageable pageable) {
-        return usuarios.findComFiltros(ativo, verificado, papel, busca, pageable).map(UsuarioResponse::from);
+        Page<Usuario> page = usuarios.findComFiltros(ativo, verificado, papel, busca, pageable);
+        List<Long> ids = page.getContent().stream().map(Usuario::getId).toList();
+        // Status do perfil de promotor por usuario (1 query batch, sem N+1).
+        Map<Long, String> statusPorUsuario = ids.isEmpty() ? Map.of()
+                : perfis.findByUsuarioIdIn(ids).stream()
+                        .collect(Collectors.toMap(PerfilVerificado::getUsuarioId, p -> p.getStatus().name()));
+        return page.map(u -> UsuarioResponse.from(u, statusPorUsuario.get(u.getId())));
     }
 
     @Transactional(readOnly = true)

@@ -26,6 +26,8 @@ export type UsuarioAdmin = {
   verificado: boolean
   ativo: boolean
   criadoEm: string
+  /** Status do perfil de promotor: PENDENTE | VERIFICADO | REJEITADO | null (nao tem perfil). */
+  statusPerfil?: string | null
 }
 
 export type UsuarioDetalhe = UsuarioAdmin & {

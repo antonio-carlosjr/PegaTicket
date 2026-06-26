@@ -57,8 +57,9 @@ export function Home() {
       listarUsuarios()
         .then((us) => setAdminStats({
           total: us.length,
-          pendentes: us.filter((u) => u.papel === 'PROMOTOR' && !u.verificado).length,
-          promotores: us.filter((u) => u.papel === 'PROMOTOR' && u.verificado).length,
+          // Fonte autoritativa = status do perfil de promotor (PENDENTE aguarda aprovacao).
+          pendentes: us.filter((u) => u.statusPerfil === 'PENDENTE').length,
+          promotores: us.filter((u) => u.statusPerfil === 'VERIFICADO').length,
         }))
         .catch(() => {})
     }
