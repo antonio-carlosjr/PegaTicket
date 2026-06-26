@@ -29,9 +29,4 @@ public class UserController {
         return ResponseEntity.ok(userService.findById(userId));
     }
 
-    @PutMapping("/{id}/verify")
-    public ResponseEntity<UsuarioResponse> verify(@PathVariable Long id) {
-        // TODO: restringir a admin em sprint futura
-        return ResponseEntity.ok(userService.verificar(id));
-    }
 }

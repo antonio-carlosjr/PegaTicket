@@ -23,8 +23,8 @@ spring:
     enabled: false
 
 jwt:
-  secret: test-secret-com-mais-de-32-bytes-para-passar-na-validacao
-  expiration-ms: 60000
+  secret: troque-este-segredo-por-um-valor-aleatorio-de-no-minimo-32-chars
+  expiration-ms: 3600000
 
 app:
   mail:

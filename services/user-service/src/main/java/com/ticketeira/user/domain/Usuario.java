@@ -35,6 +35,9 @@ public class Usuario {
     @Column(nullable = false)
     private boolean verificado;
 
+    @Column(nullable = false)
+    private boolean ativo;
+
     @Column(name = "criado_em", nullable = false)
     private OffsetDateTime criadoEm;
 
@@ -47,6 +50,7 @@ public class Usuario {
         this.senhaHash = senhaHash;
         this.papel = papel;
         this.verificado = verificado;
+        this.ativo = true;
         this.criadoEm = OffsetDateTime.now();
     }
 
@@ -57,7 +61,7 @@ public class Usuario {
 
     /** Cria um promotor pendente (admin precisa aprovar). */
     public static Usuario novoPromotorPendente(String nome, String email, String senhaHash) {
-        return new Usuario(nome, email, senhaHash, Papel.PROMOTOR, false);
+        return new Usuario(nome, email, senhaHash, Papel.PARTICIPANTE, false);
     }
 
     public Long getId() { return id; }
@@ -66,6 +70,7 @@ public class Usuario {
     public String getSenhaHash() { return senhaHash; }
     public Papel getPapel() { return papel; }
     public boolean isVerificado() { return verificado; }
+    public boolean isAtivo() { return ativo; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }
 
     public void marcarComoVerificado() {
@@ -75,4 +80,9 @@ public class Usuario {
     public void atualizarSenha(String novaSenhaHash) {
         this.senhaHash = novaSenhaHash;
     }
+
+    public void ativar() { this.ativo = true; }
+    public void inativar() { this.ativo = false; }
+    
+    public void promover() { this.papel = Papel.PROMOTOR; }
 }

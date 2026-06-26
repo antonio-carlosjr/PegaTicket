@@ -44,6 +44,16 @@ export const registerPromotorSchema = z.object({
   senha: senhaSchema,
   cpf: cpfSchema,
   telefone: telefoneSchema,
+  emailContato: z.string().email('E-mail invalido').or(z.literal('')).optional(),
+  cep: z.string().regex(/^\d{5}-\d{3}$/, 'CEP invalido').or(z.literal('')).optional(),
+  logradouro: z.string().max(160).optional(),
+  numero: z.string().max(20).optional(),
+  complemento: z.string().max(80).optional(),
+  bairro: z.string().max(80).optional(),
+  cidade: z.string().max(80).optional(),
+  uf: z.string().length(2, 'UF deve ter 2 letras').or(z.literal('')).optional(),
+  instagram: z.string().max(80).optional(),
+  website: z.string().max(200).optional(),
 })
 export type RegisterPromotorValues = z.infer<typeof registerPromotorSchema>
 

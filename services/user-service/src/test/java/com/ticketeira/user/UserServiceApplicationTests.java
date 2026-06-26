@@ -32,11 +32,11 @@ class UserServiceApplicationTests {
     private PerfilVerificadoRepository perfis;
 
     private static RegisterRequest participante(String nome, String email, String senha) {
-        return new RegisterRequest(nome, email, senha, null, null, null);
+        return new RegisterRequest(nome, email, senha, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     private static RegisterRequest promotor(String nome, String email, String senha, String cpf, String tel) {
-        return new RegisterRequest(nome, email, senha, Papel.PROMOTOR, cpf, tel);
+        return new RegisterRequest(nome, email, senha, Papel.PROMOTOR, cpf, tel, null, null, null, null, null, null, null, null, null, null);
     }
 
     @Test
@@ -60,7 +60,7 @@ class UserServiceApplicationTests {
                 "Carlos", "carlos@x.com", "senha123",
                 "123.456.789-00", "(11) 91234-5678"));
 
-        assertThat(u.papel()).isEqualTo(Papel.PROMOTOR);
+        assertThat(u.papel()).isEqualTo(Papel.PARTICIPANTE);
         assertThat(u.verificado()).isFalse();
 
         assertThat(perfis.findByUsuarioId(u.id())).isPresent();
@@ -87,7 +87,7 @@ class UserServiceApplicationTests {
     @Test
     void registroAdminEhBloqueado() {
         RegisterRequest req = new RegisterRequest(
-                "Hacker", "h@x.com", "senha123", Papel.ADMIN, null, null);
+                "Hacker", "h@x.com", "senha123", Papel.ADMIN, null, null, null, null, null, null, null, null, null, null, null, null);
 
         assertThatThrownBy(() -> authService.register(req))
                 .hasMessageContaining("ADMIN");

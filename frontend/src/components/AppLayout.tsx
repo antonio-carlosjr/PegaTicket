@@ -17,6 +17,11 @@ export function AppLayout() {
           </Link>
 
           <nav className="flex items-center gap-3">
+            {user?.papel === 'ADMIN' && (
+              <Link to="/admin/usuarios" className="text-sm font-medium text-primary hover:underline">
+                Admin
+              </Link>
+            )}
             {user && (
               <div className="hidden items-center gap-2 sm:flex">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">

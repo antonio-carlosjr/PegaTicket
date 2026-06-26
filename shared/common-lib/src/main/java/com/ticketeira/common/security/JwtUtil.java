@@ -17,6 +17,7 @@ public class JwtUtil {
 
     private static final String CLAIM_EMAIL = "email";
     private static final String CLAIM_VERIFICADO = "verificado";
+    private static final String CLAIM_PAPEL = "papel";
 
     private final SecretKey key;
     private final Duration expiration;
@@ -36,12 +37,17 @@ public class JwtUtil {
     }
 
     public String generateToken(Long userId, String email, boolean verificado) {
+        return generateToken(userId, email, verificado, "PARTICIPANTE");
+    }
+
+    public String generateToken(Long userId, String email, boolean verificado, String papel) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .issuer(issuer)
                 .subject(String.valueOf(userId))
                 .claim(CLAIM_EMAIL, email)
                 .claim(CLAIM_VERIFICADO, verificado)
+                .claim(CLAIM_PAPEL, papel)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(expiration)))
                 .signWith(key)
@@ -60,8 +66,12 @@ public class JwtUtil {
             Long userId = Long.valueOf(claims.getSubject());
             String email = claims.get(CLAIM_EMAIL, String.class);
             Boolean verificado = claims.get(CLAIM_VERIFICADO, Boolean.class);
+            String papel = claims.get(CLAIM_PAPEL, String.class);
+            if (papel == null) {
+                papel = "PARTICIPANTE";
+            }
 
-            return new AuthenticatedUser(userId, email, Boolean.TRUE.equals(verificado));
+            return new AuthenticatedUser(userId, email, Boolean.TRUE.equals(verificado), papel);
         } catch (ExpiredJwtException e) {
             throw new UnauthorizedException("Token expirado.");
         } catch (JwtException | IllegalArgumentException e) {

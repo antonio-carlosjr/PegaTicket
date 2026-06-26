@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Atualização sobre sua solicitação</title>
+</head>
+<body>
+    <h2>Olá, <span th:text="${nome}">Promotor</span></h2>
+    <p>Analisamos sua solicitação para o perfil de Promotor, mas infelizmente ela foi <strong>rejeitada</strong> neste momento.</p>
+    <p><strong>Motivo:</strong> <span th:text="${motivo}">...</span></p>
+    <br/>
+    <p>Você pode continuar utilizando a plataforma como participante, e se desejar, pode corrigir as informações e enviar uma nova solicitação.</p>
+    <br/>
+    <a th:href="${linkApp}" style="background-color: #2196F3; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Acessar a Plataforma</a>
+    <br/><br/>
+    <p>Equipe Ticketeira</p>
+</body>
+</html>
