@@ -7,6 +7,8 @@ import { ResetPassword } from '@/pages/ResetPassword'
 import { Home } from '@/pages/Home'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/AppLayout'
+import { AdminRoute } from '@/components/AdminRoute'
+import { AdminUsuarios } from '@/pages/AdminUsuarios'
 
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth()
@@ -31,6 +33,7 @@ export function AppRoutes() {
         }
       >
         <Route path="/" element={<Home />} />
+        <Route path="/admin/usuarios" element={<AdminRoute><AdminUsuarios /></AdminRoute>} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

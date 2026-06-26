@@ -64,6 +64,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                     .header("X-User-Id", String.valueOf(user.id()))
                     .header("X-User-Email", user.email())
                     .header("X-User-Verified", String.valueOf(user.verificado()))
+                    .header("X-User-Papel", user.papel())
                     .build();
 
             return chain.filter(exchange.mutate().request(mutated).build());
@@ -79,7 +80,7 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private boolean isWhitelisted(String path) {
-        return WHITELIST.stream().anyMatch(path::startsWith);
+        return WHITELIST.contains(path);
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {

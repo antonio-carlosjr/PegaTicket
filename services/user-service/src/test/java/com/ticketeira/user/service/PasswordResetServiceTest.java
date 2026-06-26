@@ -58,7 +58,7 @@ class PasswordResetServiceTest {
     @BeforeEach
     void setUp() {
         authService.register(new RegisterRequest(
-                "Ana", "ana@example.com", "senhaOriginal", null, null, null));
+                "Ana", "ana@example.com", "senhaOriginal", null, null, null, null, null, null, null, null, null, null, null, null, null));
         ana = usuarios.findByEmail("ana@example.com").orElseThrow();
     }
 

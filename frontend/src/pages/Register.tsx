@@ -132,7 +132,7 @@ function FormPromotor({ onSuccess }: { onSuccess: () => void }) {
     formState: { errors, isSubmitting },
   } = useForm<RegisterPromotorValues>({
     resolver: zodResolver(registerPromotorSchema),
-    defaultValues: { nome: '', email: '', senha: '', cpf: '', telefone: '' },
+    defaultValues: { nome: '', email: '', senha: '', cpf: '', telefone: '', emailContato: '', cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', website: '' },
   })
 
   async function onSubmit(values: RegisterPromotorValues) {
@@ -218,6 +218,59 @@ function FormPromotor({ onSuccess }: { onSuccess: () => void }) {
           />
         </FormField>
       </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <FormField label="E-mail de Contato" htmlFor="emailContato" error={errors.emailContato}>
+          <Input id="emailContato" type="email" placeholder="contato@empresa.com" invalid={!!errors.emailContato} {...register('emailContato')} />
+        </FormField>
+        <FormField label="Website" htmlFor="website" error={errors.website}>
+          <Input id="website" placeholder="https://..." invalid={!!errors.website} {...register('website')} />
+        </FormField>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <FormField label="CEP" htmlFor="cep" error={errors.cep}>
+          <Controller
+            name="cep"
+            control={control}
+            render={({ field }) => (
+              <MaskedInput id="cep" mask="00000-000" placeholder="00000-000" invalid={!!errors.cep} value={field.value || ''} onValueChange={field.onChange} onBlur={field.onBlur} name={field.name} />
+            )}
+          />
+        </FormField>
+        <div className="sm:col-span-2">
+          <FormField label="Logradouro" htmlFor="logradouro" error={errors.logradouro}>
+            <Input id="logradouro" placeholder="Rua, Avenida..." invalid={!!errors.logradouro} {...register('logradouro')} />
+          </FormField>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <FormField label="Numero" htmlFor="numero" error={errors.numero}>
+          <Input id="numero" placeholder="123" invalid={!!errors.numero} {...register('numero')} />
+        </FormField>
+        <div className="sm:col-span-2">
+          <FormField label="Complemento" htmlFor="complemento" error={errors.complemento}>
+            <Input id="complemento" placeholder="Apto, Sala..." invalid={!!errors.complemento} {...register('complemento')} />
+          </FormField>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+        <FormField label="Bairro" htmlFor="bairro" error={errors.bairro}>
+          <Input id="bairro" placeholder="Bairro" invalid={!!errors.bairro} {...register('bairro')} />
+        </FormField>
+        <FormField label="Cidade" htmlFor="cidade" error={errors.cidade}>
+          <Input id="cidade" placeholder="Cidade" invalid={!!errors.cidade} {...register('cidade')} />
+        </FormField>
+        <FormField label="UF" htmlFor="uf" error={errors.uf}>
+          <Input id="uf" placeholder="SP" invalid={!!errors.uf} maxLength={2} {...register('uf')} />
+        </FormField>
+      </div>
+
+      <FormField label="Instagram" htmlFor="instagram" error={errors.instagram}>
+        <Input id="instagram" placeholder="@seu.perfil" invalid={!!errors.instagram} {...register('instagram')} />
+      </FormField>
 
       <FormField label="Senha" htmlFor="senha-p" error={errors.senha} hint="No minimo 6 caracteres" required>
         <PasswordInput

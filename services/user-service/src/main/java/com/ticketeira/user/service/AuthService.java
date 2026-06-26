@@ -59,7 +59,19 @@ public class AuthService {
         if (papel == Papel.PROMOTOR) {
             validarDadosDePromotor(req);
             novo = usuarios.save(Usuario.novoPromotorPendente(nome, email, hash));
-            perfis.save(new PerfilVerificado(novo.getId(), req.telefone().trim(), req.cpf().trim()));
+            perfis.save(new PerfilVerificado(
+                    novo.getId(), req.telefone().trim(), req.cpf().trim(),
+                    req.emailContato() != null ? req.emailContato().trim() : null,
+                    req.cep() != null ? req.cep().trim() : null,
+                    req.logradouro() != null ? req.logradouro().trim() : null,
+                    req.numero() != null ? req.numero().trim() : null,
+                    req.complemento() != null ? req.complemento().trim() : null,
+                    req.bairro() != null ? req.bairro().trim() : null,
+                    req.cidade() != null ? req.cidade().trim() : null,
+                    req.uf() != null ? req.uf().trim() : null,
+                    req.instagram() != null ? req.instagram().trim() : null,
+                    req.website() != null ? req.website().trim() : null
+            ));
         } else {
             novo = usuarios.save(Usuario.novoParticipante(nome, email, hash));
         }
@@ -87,11 +99,15 @@ public class AuthService {
         Usuario u = usuarios.findByEmail(email)
                 .orElseThrow(() -> new UnauthorizedException("Credenciais invalidas."));
 
+        if (!u.isAtivo()) {
+            throw new UnauthorizedException("Conta inativa. Entre em contato com o administrador.");
+        }
+
         if (!passwordEncoder.matches(req.senha(), u.getSenhaHash())) {
             throw new UnauthorizedException("Credenciais invalidas.");
         }
 
-        String token = jwtUtil.generateToken(u.getId(), u.getEmail(), u.isVerificado());
+        String token = jwtUtil.generateToken(u.getId(), u.getEmail(), u.isVerificado(), u.getPapel().name());
         return LoginResponse.of(token, jwtUtil.getExpirationMs(), u.getId(), u.getEmail(), u.getPapel(), u.isVerificado());
     }
 

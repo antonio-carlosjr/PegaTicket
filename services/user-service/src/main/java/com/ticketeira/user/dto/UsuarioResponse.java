@@ -11,9 +11,10 @@ public record UsuarioResponse(
         String email,
         Papel papel,
         boolean verificado,
+        boolean ativo,
         OffsetDateTime criadoEm
 ) {
     public static UsuarioResponse from(Usuario u) {
-        return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPapel(), u.isVerificado(), u.getCriadoEm());
+        return new UsuarioResponse(u.getId(), u.getNome(), u.getEmail(), u.getPapel(), u.isVerificado(), u.isAtivo(), u.getCriadoEm());
     }
 }

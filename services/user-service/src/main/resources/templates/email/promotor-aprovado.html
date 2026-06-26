@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Sua conta foi aprovada!</title>
+</head>
+<body>
+    <h2>Olá, <span th:text="${nome}">Promotor</span>!</h2>
+    <p>Temos boas notícias! Sua solicitação de perfil de Promotor foi <strong>aprovada</strong>.</p>
+    <p>Você já pode acessar o painel e começar a criar seus eventos.</p>
+    <br/>
+    <a th:href="${linkApp}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px;">Acessar o Painel</a>
+    <br/><br/>
+    <p>Equipe Ticketeira</p>
+</body>
+</html>

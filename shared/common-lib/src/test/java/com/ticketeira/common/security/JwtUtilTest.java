@@ -22,6 +22,19 @@ class JwtUtilTest {
         assertThat(user.id()).isEqualTo(42L);
         assertThat(user.email()).isEqualTo("ana@example.com");
         assertThat(user.verificado()).isTrue();
+        assertThat(user.papel()).isEqualTo("PARTICIPANTE");
+    }
+
+    @Test
+    void deveGerarEValidarTokenComPapel() {
+        String token = jwt.generateToken(42L, "admin@example.com", true, "ADMIN");
+
+        AuthenticatedUser user = jwt.validateToken(token);
+
+        assertThat(user.id()).isEqualTo(42L);
+        assertThat(user.email()).isEqualTo("admin@example.com");
+        assertThat(user.verificado()).isTrue();
+        assertThat(user.papel()).isEqualTo("ADMIN");
     }
 
     @Test
