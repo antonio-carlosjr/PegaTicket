@@ -9,6 +9,8 @@ import { Eventos } from '@/pages/Eventos'
 import { EventoDetalhe } from '@/pages/EventoDetalhe'
 import { MeusEventos } from '@/pages/MeusEventos'
 import { CriarEditarEvento } from '@/pages/CriarEditarEvento'
+import { MeusIngressos } from '@/pages/MeusIngressos'
+import { MinhasInscricoes } from '@/pages/MinhasInscricoes'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/AppLayout'
 import { AdminRoute } from '@/components/AdminRoute'
@@ -59,6 +61,10 @@ export function AppRoutes() {
           path="/eventos/:id/editar"
           element={<PromotorRoute><CriarEditarEvento /></PromotorRoute>}
         />
+
+        {/* Ingressos e inscrições — qualquer autenticado */}
+        <Route path="/meus-ingressos" element={<MeusIngressos />} />
+        <Route path="/minhas-inscricoes" element={<MinhasInscricoes />} />
 
         {/* Admin */}
         <Route

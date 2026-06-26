@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
-import { LogOut, PlusCircle, User2 } from 'lucide-react'
+import { LogOut, PlusCircle, Ticket, User2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -25,6 +25,15 @@ export function AppLayout() {
               className="text-sm font-medium text-foreground hover:text-primary"
             >
               Eventos
+            </Link>
+
+            {/* ── Meus ingressos (todos os autenticados) ── */}
+            <Link
+              to="/meus-ingressos"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary"
+            >
+              <Ticket className="h-4 w-4" />
+              <span className="hidden sm:inline">Meus ingressos</span>
             </Link>
 
             {/* ── Itens exclusivos do PROMOTOR ── */}
