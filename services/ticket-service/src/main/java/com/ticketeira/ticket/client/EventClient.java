@@ -4,7 +4,6 @@ import com.ticketeira.common.exception.BusinessException;
 import com.ticketeira.common.exception.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
@@ -36,8 +35,17 @@ public class EventClient {
                     .uri("/internal/events/{id}", eventoId)
                     .retrieve()
                     .onStatus(HttpStatusCode::is4xxClientError, (req, resp) -> {
-                        if (resp.getStatusCode().value() == 404) {
+                        int sc = resp.getStatusCode().value();
+                        if (sc == 404) {
                             throw new NotFoundException("EVENTO_NAO_ENCONTRADO");
+                        }
+                        if (sc == 403) {
+                            // Mis-config de infra: INTERNAL_TOKEN divergente entre ticket e event.
+                            // Deve gritar nos logs como erro de autorizacao interna, nao virar 503 mudo.
+                            log.error("X-Internal-Token rejeitado pelo event-service (403) ao validar evento {} "
+                                    + "— conferir INTERNAL_TOKEN identico nos dois servicos", eventoId);
+                        } else {
+                            log.warn("event-service respondeu {} ao validar evento {}", sc, eventoId);
                         }
                         throw new BusinessException("EVENTO_INDISPONIVEL", 503);
                     })

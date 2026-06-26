@@ -1,8 +1,8 @@
 package com.ticketeira.ticket.client;
 
 /**
- * Payload de validacao retornado pelo event-service (GET /events/{id}).
- * Campos mapeados conforme EventoResponse do event-service.
+ * Payload de validacao retornado pelo event-service (GET /internal/events/{id}, ADR-T08).
+ * Campos mapeados conforme EventoInternoResponse do event-service.
  */
 public record EventResumo(
         Long id,
