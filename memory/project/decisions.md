@@ -53,13 +53,39 @@
 **Status:** Proposta (dívida, Sprint 1). A migration V3 semeia 1 admin (`admin@pegaticket.local`) com hash de senha **em claro no repo**, só para dev/demo. **Decisão:** tornar a credencial env-driven / processo de bootstrap seguro antes de produção (remover o seed ou parametrizar). Ref: `memory/sprint-1/00-sprint-spec.md` §4.
 
 ## ADR-T07 — Reserva atômica de vaga (anti-overbooking)
-**Status:** Proposta (Sprint 2→3). `eventos.vagas_disponiveis` é preparado na Sprint 2 (inicializado = capacidade ao publicar) e consumido na Sprint 3 via decremento atômico `UPDATE eventos SET vagas_disponiveis = vagas_disponiveis - 1 WHERE id=? AND vagas_disponiveis > 0` (checar rowsAffected). Endpoints internos `reservar/liberar-vaga` no event-service.
+**Status:** **Aceita** (Sprint 3 — Arquiteto). `eventos.vagas_disponiveis` é preparado na Sprint 2 (inicializado = capacidade ao publicar) e consumido na Sprint 3.
+
+**Decisão definitiva (Sprint 3):**
+- **Reservar:** `@Modifying @Query` JPQL `UPDATE Evento e SET e.vagasDisponiveis = e.vagasDisponiveis - 1 WHERE e.id = :id AND e.status = PUBLICADO AND e.vagasDisponiveis > 0`, retornando `int rowsAffected`. **1** = reservou; **0** = esgotado ou não-publicado (o service distingue 409/422/404 com um `findById` **só** no caminho frio rowsAffected=0). A cláusula `WHERE vagas > 0` adquire row lock no Postgres → serializa as concorrentes, sem janela entre checar e decrementar. **Sem retry, O(1) por inscrição.**
+- **Liberar (compensação):** `UPDATE ... SET vagas = vagas + 1 WHERE id=:id AND status=PUBLICADO AND vagas < capacidade` (incremento **limitado pela capacidade**; no-op idempotente no teto). Não perfeitamente idempotente por reserva individual (sem token de reserva); o teto `< capacidade` é a salvaguarda.
+- **Rejeitado `@Version` (optimistic):** no abre-vendas vira tempestade de retries O(n²) numa única linha quente. O `UPDATE...WHERE` atômico é a escolha correta para alta contenção.
+- **Defesa em profundidade:** `CHECK (vagas_disponiveis >= 0)` (V2) recusa negativo mesmo em bug.
+- **Gate de teste:** concorrência de última vaga (K threads → 1 sucesso, K-1×409, vagas=0) **em Postgres real** (Testcontainers/smoke Docker) — H2 não reproduz o row lock. Detalhe em `memory/sprint-3/architecture.md` §Estratégias críticas e `tests-spec.md` §A4.
 
 ## ADR-T08 — Autorização inter-serviço (ticket→event)
-**Status:** Proposta (Sprint 3). Os endpoints `reservar/liberar-vaga` são chamados **service-to-service** (ticket→event) na rede interna do Docker e **não são roteados publicamente** pelo gateway. **Decisão MVP:** isolamento de rede + não-exposição; evoluir para segredo compartilhado/mTLS depois.
+**Status:** **Aceita** (Sprint 3 — Arquiteto).
+
+**Achado que muda a decisão:** o gateway tem a rota `events: Path=/api/events/** → event-service` com `StripPrefix=1`. Se os internos ficassem sob `/events/{id}/reservar-vaga`, **qualquer participante autenticado** poderia chamar `POST /api/events/{id}/reservar-vaga` e zerar `vagas_disponiveis` (DoS de vagas). O wildcard **roteia** — "não exposto no gateway" não era verdade automaticamente.
+
+**Decisão definitiva (duas camadas):**
+1. **Roteamento:** os internos vivem em prefixo dedicado **`/internal/events/{id}/reservar-vaga`** e `/liberar-vaga`. O gateway **não tem** rota `/api/internal/**` → tentativa externa = **404 no gateway** (nunca chega ao event-service). Como não ficam sob `/events/...`, nem o wildcard `/api/events/**` os alcança.
+2. **Autorização:** os internos exigem `X-Internal-Token == ${INTERNAL_SHARED_SECRET}` (env, gitignored, placeholder em `.env.example`). Ausente/errado → **403**. O ticket-service injeta o header no `EventClient`. O gateway **não** injeta nem repassa `X-Internal-Token`.
+- **Sem mTLS** no MVP (over-engineering acadêmico); fica como dívida.
+- **Gate de teste:** `/api/internal/events/1/reservar-vaga` via gateway → 404; chamada direta sem token → 403 (`tests-spec.md` §C). Detalhe em `architecture.md` §Autorização inter-serviço.
 
 ## ADR-T09 — `codigo_unico` do ingresso (QR)
-**Status:** Proposta (Sprint 3). Estratégia do código do ingresso: UUID v4 vs HMAC-assinado. Assinado facilita validação anti-forja no **check-in** (Sprint 5). Decisão final do Arquiteto na Sprint 3. O frontend renderiza o QR a partir do código.
+**Status:** **Aceita** (Sprint 3 — Arquiteto).
+
+**Decisão definitiva: UUID v4** (`java.util.UUID.randomUUID()`, gerado no backend, persistido em `codigo_unico VARCHAR(64)`). **HMAC-assinado rejeitado** para o escopo atual.
+
+Justificativa:
+- 122 bits de entropia (CSPRNG) → não-forjável na prática; sem padrão sequencial a explorar.
+- O **check-in da Sprint 5 será lookup server-side** (`SELECT WHERE codigo_unico=? AND status=ATIVO` + evento correto), **não** verificação criptográfica offline. Para lookup no banco, UUID basta — HMAC só agregaria valor se a validação fosse offline/anti-adulteração sem banco (não é requisito conhecido).
+- HMAC agora = abstração precoce (gestão/rotação de chave, formato de payload).
+- `UNIQUE(codigo_unico)` é a última linha de defesa contra colisão.
+- **Impacto Sprint 5:** check-in faz lookup por `codigo_unico`, marca `ingressos.status=UTILIZADO` + cria `checkins` (`UNIQUE(ingresso_id)` impede duplo check-in). Migrar para HMAC no futuro **invalidaria QRs já emitidos** → por isso a decisão UUID é registrada como definitiva para o escopo atual.
+
+**QR:** o **frontend** renderiza a imagem a partir da string `codigo_unico` (lib JS nova — `qrcode.react` recomendada, justificar em `frontend-log.md`). **Backend NÃO gera imagem.**
 
 ---
 
