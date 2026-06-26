@@ -33,3 +33,9 @@
 - **Smoke de concorrência em Postgres real: ✅ 14/14** (última vaga concorrente sem overbooking, dupla inscrição concorrente, defesa de roteamento ADR-T08). Ver [`test-report.md`](test-report.md).
 - **3 bugs P1 achados e corrigidos** (só apareceram no Postgres real, não no H2/CI) — ver [`bugs.md`](bugs.md).
 - Testcontainers de concorrência **rodam no CI** (`ubuntu-latest` tem Docker); o skip é só local. Não é falso-verde no gate de PR.
+
+## Validação final + PR (`/validar-sprint 3`)
+- CI local: backend `mvnw verify` BUILD SUCCESS; frontend `build` + `test:run` **60/60** (corrigido o regex de label `E-mail`).
+- Revisor (opus): **0 P0/P1**, 5 P2 / 5 P3 → `code-review.md`. P2 de baixo risco aplicados (token timing-safe, log de 403, `.env.example`, limpeza); resto no backlog (`TECH-S3-01..04`).
+- Recorrências promovidas ao `coding-standards.md` (R-S3-01..05) + `memory/code-review/sprint-3.md`.
+- **PR #3:** https://github.com/antonio-carlosjr/PegaTicket/pull/3
