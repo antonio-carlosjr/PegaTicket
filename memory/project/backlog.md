@@ -21,12 +21,18 @@
 ## Épico B — Inscrições & Ingressos (ticket-service) · RF03, RF04, RF09, RF10
 | ID | História | Estado |
 |---|---|---|
-| US-030 | Como participante, quero me inscrever num evento gratuito e receber meu ingresso | SPRINT-3 |
-| US-031 | Como participante, quero me inscrever num evento (com controle de capacidade e sem dupla inscrição) | SPRINT-3 |
-| US-032 | Como participante, quero receber um ingresso único com QR após confirmação | SPRINT-3 |
-| US-033 | Como participante, quero ver "meus ingressos" e histórico de inscrições | SPRINT-3 |
+| US-030 | Como participante, quero me inscrever num evento gratuito e receber meu ingresso | DONE |
+| US-031 | Como participante, quero me inscrever num evento (com controle de capacidade e sem dupla inscrição) | DONE |
+| US-032 | Como participante, quero receber um ingresso único com QR após confirmação | DONE |
+| US-033 | Como participante, quero ver "meus ingressos" e histórico de inscrições | DONE |
 | US-034 | Como promotor, quero validar o ingresso (check-in por QR) na porta do evento | BACKLOG |
 | US-035 | Como participante, quero cancelar minha inscrição conforme a política | BACKLOG |
+
+**Follow-ups técnicos da Sprint 3 (code-review, não bloqueiam):**
+- `TECH-S3-01` — `EventService.reservar/liberarVaga`: trocar `findById` do hot path por `UPDATE ... RETURNING`. *(CR-S3-02/03)*
+- `TECH-S3-02` — `MeusIngressos`: dedupe por `eventoId` antes do fan-out + endpoint batch quando houver 3ª ocorrência. *(CR-S3-07)*
+- `TECH-S3-03` — `EventoDetalhe`: refetch de `vagasDisponiveis` pós-inscrição; retry sem `window.location.reload()`. *(CR-S3-08/10)*
+- `TECH-S3-04` — Prod (Railway): `INTERNAL_TOKEN` sobrescreve o default `dev-internal-secret`.
 
 ## Épico C — Pagamentos & Escrow (payment-service) · RF05, RF06
 | ID | História | Estado |
