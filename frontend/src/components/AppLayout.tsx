@@ -66,17 +66,22 @@ export function AppLayout() {
               </Link>
             )}
 
-            {/* ── Perfil ── */}
+            {/* ── Meu perfil (clicavel) ── */}
             {user && (
-              <div className="hidden items-center gap-2 sm:flex">
+              <Link
+                to="/perfil"
+                className="flex items-center gap-2 rounded-md px-1.5 py-1 transition-colors hover:bg-muted"
+                aria-label="Meu perfil"
+                title="Meu perfil"
+              >
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <User2 className="h-4 w-4" />
                 </span>
-                <div className="text-sm leading-tight">
+                <div className="hidden text-sm leading-tight sm:block">
                   <p className="font-semibold text-foreground">{user.nome || user.email}</p>
                   <PapelBadge papel={user.papel} verificado={user.verificado} />
                 </div>
-              </div>
+              </Link>
             )}
 
             <Button variant="ghost" size="sm" onClick={signOut} aria-label="Sair">

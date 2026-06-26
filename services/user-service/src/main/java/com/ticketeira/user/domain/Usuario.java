@@ -77,6 +77,10 @@ public class Usuario {
         this.verificado = true;
     }
 
+    public void atualizarNome(String nome) {
+        this.nome = nome;
+    }
+
     public void atualizarSenha(String novaSenhaHash) {
         this.senhaHash = novaSenhaHash;
     }
