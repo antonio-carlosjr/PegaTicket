@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+
 /**
  * Endpoints internos: ticket-service → event-service.
  * Prefixo /internal/** NAO e roteado pelo gateway (ADR-T08 — defesa de roteamento).
@@ -40,9 +43,8 @@ public class InternalEventController {
             @PathVariable Long id,
             @RequestHeader(value = "X-Internal-Token", required = false) String token,
             HttpServletRequest req) {
-        if (!internalToken.equals(token)) {
-            return ResponseEntity.status(403)
-                    .body(ErrorResponse.of(403, "Forbidden", "ACESSO_INTERNO_NEGADO", req.getRequestURI()));
+        if (!tokenValido(token)) {
+            return acessoNegado(req);
         }
         return ResponseEntity.ok(eventService.resumoInterno(id));
     }
@@ -53,9 +55,8 @@ public class InternalEventController {
             @PathVariable Long id,
             @RequestHeader(value = "X-Internal-Token", required = false) String token,
             HttpServletRequest req) {
-        if (!internalToken.equals(token)) {
-            return ResponseEntity.status(403)
-                    .body(ErrorResponse.of(403, "Forbidden", "ACESSO_INTERNO_NEGADO", req.getRequestURI()));
+        if (!tokenValido(token)) {
+            return acessoNegado(req);
         }
         ReservaResponse resp = eventService.reservarVaga(id);
         return ResponseEntity.ok(resp);
@@ -67,11 +68,22 @@ public class InternalEventController {
             @PathVariable Long id,
             @RequestHeader(value = "X-Internal-Token", required = false) String token,
             HttpServletRequest req) {
-        if (!internalToken.equals(token)) {
-            return ResponseEntity.status(403)
-                    .body(ErrorResponse.of(403, "Forbidden", "ACESSO_INTERNO_NEGADO", req.getRequestURI()));
+        if (!tokenValido(token)) {
+            return acessoNegado(req);
         }
         ReservaResponse resp = eventService.liberarVaga(id);
         return ResponseEntity.ok(resp);
+    }
+
+    /** Comparacao constante-no-tempo do segredo interno (evita timing attack; null-safe). */
+    private boolean tokenValido(String token) {
+        return token != null && MessageDigest.isEqual(
+                internalToken.getBytes(StandardCharsets.UTF_8),
+                token.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private ResponseEntity<ErrorResponse> acessoNegado(HttpServletRequest req) {
+        return ResponseEntity.status(403)
+                .body(ErrorResponse.of(403, "Forbidden", "ACESSO_INTERNO_NEGADO", req.getRequestURI()));
     }
 }
