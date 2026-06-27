@@ -41,10 +41,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // papel mudou no banco mas o JWT antigo ainda diz PARTICIPANTE). Re-emite o token.
       const claims = decodeJwt(token)
       if (claims && (claims.papel !== u.papel || claims.verificado !== u.verificado)) {
-        const novo = await refreshTokenApi()
-        storeToken(novo.token)
-        setTokenState(novo.token)
-        setUser((prev) => (prev ? { ...prev, papel: novo.papel, verificado: novo.verificado } : prev))
+        try {
+          const novo = await refreshTokenApi()
+          storeToken(novo.token)
+          setTokenState(novo.token)
+          setUser((prev) => (prev ? { ...prev, papel: novo.papel, verificado: novo.verificado } : prev))
+        } catch {
+          // Falha ao re-emitir (ex.: endpoint indisponivel) NAO e fatal: mantem o token
+          // atual (o /me ja foi carregado); nao desloga. Re-login resolve no pior caso.
+        }
       }
     } catch {
       // Token invalido/expirado: limpa tudo
