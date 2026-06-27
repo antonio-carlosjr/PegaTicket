@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import {
   listarUsuarios,
   detalharUsuario,
@@ -12,17 +13,20 @@ import {
 import { toast } from '@/components/ui/toaster'
 import { extractApiError } from '@/api/auth'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 export function AdminUsuarios() {
   const [usuarios, setUsuarios] = useState<UsuarioAdmin[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUser, setSelectedUser] = useState<UsuarioDetalhe | null>(null)
   const [motivoRejeicao, setMotivoRejeicao] = useState('')
+  const [busca, setBusca] = useState('')
+  const [buscaAplicada, setBuscaAplicada] = useState('')
 
-  async function carregarUsuarios() {
+  async function carregarUsuarios(termo?: string) {
     setLoading(true)
     try {
-      const data = await listarUsuarios()
+      const data = await listarUsuarios(termo)
       setUsuarios(data)
     } catch (e) {
       toast.error('Erro ao listar usuarios', { description: extractApiError(e) })
@@ -34,6 +38,18 @@ export function AdminUsuarios() {
   useEffect(() => {
     carregarUsuarios()
   }, [])
+
+  function handleBuscar(e: React.FormEvent) {
+    e.preventDefault()
+    setBuscaAplicada(busca.trim())
+    carregarUsuarios(busca)
+  }
+
+  function limparBusca() {
+    setBusca('')
+    setBuscaAplicada('')
+    carregarUsuarios()
+  }
 
   async function handleAction(action: 'ativar' | 'inativar', id: number) {
     try {
@@ -83,12 +99,46 @@ export function AdminUsuarios() {
     }
   }
 
-  if (loading) return <div className="p-8">Carregando...</div>
-
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-2xl font-bold">Gerenciamento de Usuários</h1>
 
+      {/* Busca SERVER-SIDE (backend filtra por nome OU e-mail; nao filtra a lista carregada) */}
+      <form onSubmit={handleBuscar} className="flex flex-wrap items-center gap-2">
+        <div className="relative w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome ou e-mail..."
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="pl-9"
+            aria-label="Buscar usuario"
+          />
+        </div>
+        <Button type="submit" disabled={loading}>
+          <Search className="h-4 w-4" />
+          Buscar
+        </Button>
+        {buscaAplicada && (
+          <Button type="button" variant="outline" onClick={limparBusca} disabled={loading}>
+            Limpar
+          </Button>
+        )}
+      </form>
+
+      {buscaAplicada && !loading && (
+        <p className="text-sm text-muted-foreground">
+          {usuarios.length} resultado{usuarios.length !== 1 ? 's' : ''} para “{buscaAplicada}”.
+        </p>
+      )}
+
+      {loading ? (
+        <div className="p-8 text-muted-foreground">Carregando...</div>
+      ) : usuarios.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+          Nenhum usuario encontrado{buscaAplicada ? ` para “${buscaAplicada}”` : ''}.
+        </div>
+      ) : (
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="w-full text-sm text-left text-gray-500">
           <thead className="text-xs text-gray-700 uppercase bg-gray-50">
@@ -137,6 +187,7 @@ export function AdminUsuarios() {
           </tbody>
         </table>
       </div>
+      )}
 
       {selectedUser && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
