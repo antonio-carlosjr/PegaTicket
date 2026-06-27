@@ -45,6 +45,12 @@ export async function me(): Promise<Usuario> {
   return data
 }
 
+/** Re-emite o token com papel/verificado atuais do banco (resolve token defasado pos-aprovacao). */
+export async function refreshToken(): Promise<LoginResponse> {
+  const { data } = await api.post<LoginResponse>('/api/users/me/token')
+  return data
+}
+
 export async function forgotPassword(email: string): Promise<{ message: string }> {
   const { data } = await api.post<{ message: string }>('/api/auth/forgot-password', { email })
   return data

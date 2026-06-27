@@ -151,6 +151,9 @@ export function CriarEditarEvento() {
 
   // ─── Submissão final ─────────────────────────────────────────────────────
   async function onSubmit(values: EventoFormValues) {
+    // Blindagem: so salva na ULTIMA etapa. Evita submit prematuro durante a
+    // navegacao do wizard (ex.: Enter num campo ou foco no botao de submit).
+    if (etapa < STEPS.length - 1) return
     try {
       const payload: EventoCreatePayload = {
         titulo: values.titulo,

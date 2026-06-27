@@ -1,6 +1,7 @@
 package com.ticketeira.user.service;
 
 import com.ticketeira.common.exception.BusinessException;
+import com.ticketeira.common.security.JwtUtil;
 import com.ticketeira.user.domain.Usuario;
 import com.ticketeira.user.dto.AtualizarPerfilRequest;
 import com.ticketeira.user.dto.TrocarSenhaRequest;
@@ -29,6 +30,7 @@ class UserServiceTest {
     @Mock UsuarioRepository usuarios;
     @Mock PerfilVerificadoRepository perfis;
     @Mock PasswordEncoder encoder;
+    @Mock JwtUtil jwtUtil;
     @InjectMocks UserService service;
 
     private Usuario user;
