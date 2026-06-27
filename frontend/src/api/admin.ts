@@ -34,11 +34,14 @@ export type UsuarioDetalhe = UsuarioAdmin & {
   perfil?: PerfilVerificado
 }
 
-export async function listarUsuarios(): Promise<UsuarioAdmin[]> {
-  // A tela de admin nao pagina na UI: busca todos de uma vez (size alto cobre a base
-  // atual). O default do backend e 20 — sem isto, usuarios alem do 20o sumiam da lista
-  // e da contagem de pendentes na home.
-  const { data } = await api.get<{ content: UsuarioAdmin[] }>('/api/users', { params: { size: 1000 } })
+/**
+ * Lista usuarios (admin). `busca` e SERVER-SIDE: o backend filtra por nome OU e-mail
+ * (LIKE, case-insensitive). Sem `busca`, traz todos (size alto — a tela nao pagina na UI).
+ */
+export async function listarUsuarios(busca?: string): Promise<UsuarioAdmin[]> {
+  const params: Record<string, unknown> = { size: 1000 }
+  if (busca && busca.trim()) params.busca = busca.trim()
+  const { data } = await api.get<{ content: UsuarioAdmin[] }>('/api/users', { params })
   return data.content
 }
 
