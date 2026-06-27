@@ -2,9 +2,11 @@ package com.ticketeira.user.service;
 
 import com.ticketeira.common.exception.BusinessException;
 import com.ticketeira.common.exception.NotFoundException;
+import com.ticketeira.common.security.JwtUtil;
 import com.ticketeira.user.domain.PerfilVerificado;
 import com.ticketeira.user.domain.Usuario;
 import com.ticketeira.user.dto.AtualizarPerfilRequest;
+import com.ticketeira.user.dto.LoginResponse;
 import com.ticketeira.user.dto.TrocarSenhaRequest;
 import com.ticketeira.user.dto.UsuarioDetalheResponse;
 import com.ticketeira.user.dto.UsuarioResponse;
@@ -20,13 +22,29 @@ public class UserService {
     private final UsuarioRepository repository;
     private final PerfilVerificadoRepository perfis;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
     public UserService(UsuarioRepository repository,
                        PerfilVerificadoRepository perfis,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil) {
         this.repository = repository;
         this.perfis = perfis;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
+
+    /**
+     * Re-emite o JWT do proprio usuario com o papel/verificado ATUAIS do banco.
+     * Resolve o token defasado (ex.: o admin aprovou o promotor depois do login dele).
+     * Usa o X-User-Id (estavel) — funciona mesmo com o claim de papel antigo.
+     */
+    @Transactional(readOnly = true)
+    public LoginResponse refreshToken(Long id) {
+        Usuario u = repository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Usuario nao encontrado."));
+        String token = jwtUtil.generateToken(u.getId(), u.getEmail(), u.isVerificado(), u.getPapel().name());
+        return LoginResponse.of(token, jwtUtil.getExpirationMs(), u.getId(), u.getEmail(), u.getPapel(), u.isVerificado());
     }
 
     @Transactional(readOnly = true)

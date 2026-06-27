@@ -2,6 +2,7 @@ package com.ticketeira.user.controller;
 
 import com.ticketeira.common.exception.UnauthorizedException;
 import com.ticketeira.user.dto.AtualizarPerfilRequest;
+import com.ticketeira.user.dto.LoginResponse;
 import com.ticketeira.user.dto.TrocarSenhaRequest;
 import com.ticketeira.user.dto.UsuarioDetalheResponse;
 import com.ticketeira.user.dto.UsuarioResponse;
@@ -9,6 +10,7 @@ import com.ticketeira.user.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -35,6 +37,13 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UsuarioResponse> me(@RequestHeader(value = "X-User-Id", required = false) Long userId) {
         return ResponseEntity.ok(userService.findById(requireUserId(userId)));
+    }
+
+    /** Re-emite o token do proprio usuario com papel/verificado atuais (token defasado pos-aprovacao). */
+    @PostMapping("/me/token")
+    public ResponseEntity<LoginResponse> refreshToken(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        return ResponseEntity.ok(userService.refreshToken(requireUserId(userId)));
     }
 
     /** Perfil completo do proprio usuario (com perfil rico, se promotor). */
