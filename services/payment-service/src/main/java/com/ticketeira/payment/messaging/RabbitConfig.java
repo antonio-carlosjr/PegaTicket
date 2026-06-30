@@ -1,20 +1,25 @@
 package com.ticketeira.payment.messaging;
 
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * Configuracao do RabbitMQ.
- * Declara topologia identica ao infra/rabbitmq/definitions.json para que
- * os testes Testcontainers tenham as filas/bindings disponiveis.
- * Os beans de topologia (filas/exchanges/bindings) sao condicionais ao ConnectionFactory
- * para nao falhar quando RabbitAutoConfiguration e excluida (perfil test H2).
+ * Declara o converter JSON e a topologia identica ao infra/rabbitmq/definitions.json
+ * (para que os testes Testcontainers tenham filas/bindings disponiveis).
+ *
+ * O RabbitTemplate e o ConnectionFactory sao AUTO-CONFIGURADOS pelo Spring Boot
+ * (RabbitAutoConfiguration). O MessageConverter abaixo e aplicado automaticamente
+ * tanto ao RabbitTemplate quanto a fabrica de listeners. NAO declaramos um
+ * RabbitTemplate proprio nem condicionamos os beans ao ConnectionFactory: a versao
+ * anterior usava @ConditionalOnBean(ConnectionFactory.class) em config de usuario,
+ * que e avaliado ANTES do autoconfigure registrar o ConnectionFactory — pulando os
+ * beans ate quando o broker existe. Sem broker (perfil test H2 / Postgres-only sem
+ * RabbitAutoConfiguration), estes beans ficam inertes (nenhum RabbitAdmin os declara)
+ * e nao exigem ConnectionFactory.
  */
 @Configuration
 public class RabbitConfig {
@@ -36,29 +41,14 @@ public class RabbitConfig {
         return new Jackson2JsonMessageConverter();
     }
 
-    /**
-     * Sobrescreve o RabbitTemplate auto-configurado para usar o Jackson converter.
-     * Condicional: so criado quando o ConnectionFactory existe (Rabbit ativo).
-     */
-    @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
-                                         MessageConverter jsonMessageConverter) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(jsonMessageConverter);
-        return template;
-    }
-
-    // --- Exchanges (condicionais ao ConnectionFactory) ---
+    // --- Exchanges ---
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public TopicExchange exchangeEvents() {
         return ExchangeBuilder.topicExchange(EXCHANGE_EVENTS).durable(true).build();
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public TopicExchange exchangeDlx() {
         return ExchangeBuilder.topicExchange(EXCHANGE_DLX).durable(true).build();
     }
@@ -66,7 +56,6 @@ public class RabbitConfig {
     // --- Filas principais com DLX ---
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queuePedidoCriado() {
         return QueueBuilder.durable(QUEUE_PEDIDO_CRIADO)
                 .withArgument("x-dead-letter-exchange", EXCHANGE_DLX)
@@ -75,7 +64,6 @@ public class RabbitConfig {
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queuePagamentoAprovado() {
         return QueueBuilder.durable(QUEUE_PAGAMENTO_APROVADO)
                 .withArgument("x-dead-letter-exchange", EXCHANGE_DLX)
@@ -84,7 +72,6 @@ public class RabbitConfig {
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queueEventoFinalizado() {
         return QueueBuilder.durable(QUEUE_EVENTO_FINALIZADO)
                 .withArgument("x-dead-letter-exchange", EXCHANGE_DLX)
@@ -95,19 +82,16 @@ public class RabbitConfig {
     // --- Filas DLQ ---
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queuePedidoCriadoDlq() {
         return QueueBuilder.durable(QUEUE_PEDIDO_CRIADO_DLQ).build();
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queuePagamentoAprovadoDlq() {
         return QueueBuilder.durable(QUEUE_PAGAMENTO_APROVADO_DLQ).build();
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Queue queueEventoFinalizadoDlq() {
         return QueueBuilder.durable(QUEUE_EVENTO_FINALIZADO_DLQ).build();
     }
@@ -115,52 +99,34 @@ public class RabbitConfig {
     // --- Bindings: exchange principal -> filas ---
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingPedidoCriado() {
-        return BindingBuilder.bind(queuePedidoCriado())
-                .to(exchangeEvents())
-                .with(QUEUE_PEDIDO_CRIADO);
+        return BindingBuilder.bind(queuePedidoCriado()).to(exchangeEvents()).with(QUEUE_PEDIDO_CRIADO);
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingPagamentoAprovado() {
-        return BindingBuilder.bind(queuePagamentoAprovado())
-                .to(exchangeEvents())
-                .with(QUEUE_PAGAMENTO_APROVADO);
+        return BindingBuilder.bind(queuePagamentoAprovado()).to(exchangeEvents()).with(QUEUE_PAGAMENTO_APROVADO);
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingEventoFinalizado() {
-        return BindingBuilder.bind(queueEventoFinalizado())
-                .to(exchangeEvents())
-                .with(QUEUE_EVENTO_FINALIZADO);
+        return BindingBuilder.bind(queueEventoFinalizado()).to(exchangeEvents()).with(QUEUE_EVENTO_FINALIZADO);
     }
 
     // --- Bindings: DLX -> DLQ ---
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingPedidoCriadoDlq() {
-        return BindingBuilder.bind(queuePedidoCriadoDlq())
-                .to(exchangeDlx())
-                .with(QUEUE_PEDIDO_CRIADO);
+        return BindingBuilder.bind(queuePedidoCriadoDlq()).to(exchangeDlx()).with(QUEUE_PEDIDO_CRIADO);
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingPagamentoAprovadoDlq() {
-        return BindingBuilder.bind(queuePagamentoAprovadoDlq())
-                .to(exchangeDlx())
-                .with(QUEUE_PAGAMENTO_APROVADO);
+        return BindingBuilder.bind(queuePagamentoAprovadoDlq()).to(exchangeDlx()).with(QUEUE_PAGAMENTO_APROVADO);
     }
 
     @Bean
-    @ConditionalOnBean(ConnectionFactory.class)
     public Binding bindingEventoFinalizadoDlq() {
-        return BindingBuilder.bind(queueEventoFinalizadoDlq())
-                .to(exchangeDlx())
-                .with(QUEUE_EVENTO_FINALIZADO);
+        return BindingBuilder.bind(queueEventoFinalizadoDlq()).to(exchangeDlx()).with(QUEUE_EVENTO_FINALIZADO);
     }
 }

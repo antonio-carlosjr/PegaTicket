@@ -8,8 +8,6 @@ import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -100,19 +98,17 @@ public class RabbitConfig {
                 .with(QUEUE_PAGAMENTO_APROVADO);
     }
 
+    // O RabbitTemplate e o ConnectionFactory sao auto-configurados pelo Spring Boot
+    // (RabbitAutoConfiguration). Este bean MessageConverter e aplicado automaticamente
+    // tanto ao RabbitTemplate quanto a fabrica de listeners. Declarar um RabbitTemplate
+    // proprio aqui exigiria o ConnectionFactory no contexto e quebraria os testes que
+    // excluem o RabbitAutoConfiguration (Postgres-only). Quando o broker esta ausente,
+    // esta config so contribui beans inertes (converter/filas) — sem efeito.
     @Bean
     public Jackson2JsonMessageConverter messageConverter() {
         ObjectMapper mapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         return new Jackson2JsonMessageConverter(mapper);
-    }
-
-    @Bean
-    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory,
-                                         Jackson2JsonMessageConverter messageConverter) {
-        RabbitTemplate template = new RabbitTemplate(connectionFactory);
-        template.setMessageConverter(messageConverter);
-        return template;
     }
 }
