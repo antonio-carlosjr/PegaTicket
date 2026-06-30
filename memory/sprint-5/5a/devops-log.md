@@ -15,6 +15,14 @@ Fora desta trilha: 5B (check-in/cancelamento/avaliações), 5C (carga/observabil
 - Conventional Commits, **sem `Co-Authored-By`** (ADR-P03). `git add` por caminho (nunca `-A`).
 - Reusa os padrões do S4: idempotência `processed_events` + publish `afterCommit` (ADR-T11), reserva atômica (ADR-T07), token interno (ADR-T08), consumidor trata "evento tarde demais" com ACK no-op (CR-S4-01).
 
+## Validação (validar-sprint 5a)
+- CI local: `./mvnw verify` SUCCESS + frontend build/test 80/80.
+- Revisor (opus): **0 P0/P1** (`code-review.md`); refactor `cancelar()` e fiação AMQP do event-service confirmados corretos; 7 P2/P3 ao owner.
+- **CI do PR (GitHub Actions, com Docker): VERDE em 1 ciclo** — Testcontainers (PG+Rabbit) da saga financeira: repasse/reembolso idempotentes, corrida repasse-vs-reembolso, fan-out `evento.cancelado`/`evento.cancelado.ticket`.
+- **1 fix de CI:** `ticket TestcontainersBase` → singleton (recorrência S4; 2 classes compartilhavam `@Container static` → broker parava entre classes → 5× 30s timeout). Promovido a regra em `coding-standards`.
+- **PR aberto:** https://github.com/antonio-carlosjr/PegaTicket/pull/20 — **NÃO mergeado** (decisão humana).
+- Backlog: **US-042, US-043 → DONE**.
+
 ## Commits
 | # | Tipo | Assunto | Fase |
 |---|---|---|---|
