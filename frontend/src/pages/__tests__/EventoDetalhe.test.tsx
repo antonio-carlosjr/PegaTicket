@@ -116,7 +116,9 @@ describe('<EventoDetalhe>', () => {
     expect(screen.getByRole('button', { name: /inscrever-se neste evento/i })).toBeInTheDocument()
   })
 
-  it('nao exibe botao Inscrever-se para evento PAGO', async () => {
+  // S4: eventos PAGOS agora tem fluxo de inscricao com checkout (antes era "disponivel em breve").
+  // Contrato alterado em api-contracts.md §1 (Sprint 4, US-040/041).
+  it('exibe botao Inscrever-se e pagar para evento PAGO', async () => {
     vi.mocked(eventsApi.detalheEvento).mockResolvedValue(eventoCompleto)
 
     renderDetalhe('/eventos/42')
@@ -125,10 +127,9 @@ describe('<EventoDetalhe>', () => {
       expect(screen.getByRole('heading', { name: /show do ano/i })).toBeInTheDocument()
     })
 
-    expect(screen.queryByRole('button', { name: /inscrever-se/i })).not.toBeInTheDocument()
-    // Texto real: "Inscrições pagas disponíveis em breve."
+    // S4: botao de inscricao paga deve aparecer
     expect(
-      screen.getByText('Inscrições pagas disponíveis em breve.')
+      screen.getByRole('button', { name: /inscrever-se e pagar neste evento/i })
     ).toBeInTheDocument()
   })
 

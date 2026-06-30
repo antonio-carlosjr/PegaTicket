@@ -11,6 +11,7 @@ import { MeusEventos } from '@/pages/MeusEventos'
 import { CriarEditarEvento } from '@/pages/CriarEditarEvento'
 import { MeusIngressos } from '@/pages/MeusIngressos'
 import { MinhasInscricoes } from '@/pages/MinhasInscricoes'
+import { CheckoutPage } from '@/pages/CheckoutPage'
 import { Perfil } from '@/pages/Perfil'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { AppLayout } from '@/components/AppLayout'
@@ -66,6 +67,7 @@ export function AppRoutes() {
         {/* Ingressos e inscrições — qualquer autenticado */}
         <Route path="/meus-ingressos" element={<MeusIngressos />} />
         <Route path="/minhas-inscricoes" element={<MinhasInscricoes />} />
+        <Route path="/checkout/:inscricaoId" element={<CheckoutPage />} />
 
         {/* Meu perfil — qualquer autenticado */}
         <Route path="/perfil" element={<Perfil />} />
