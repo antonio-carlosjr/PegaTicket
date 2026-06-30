@@ -142,6 +142,40 @@ Justificativa:
 - **Migrations:** payment `V3__repasse_reembolso.sql`; event `V3__realizado_cancelado.sql` (`realizado_em`/`cancelado_em`); ticket **sem migration** (status CANCELADA/CANCELADO + processed_events ja existem). infra: `evento.cancelado` (+`.ticket`) + DLQs em `definitions.json`.
 - **Gate de teste (PG+Rabbit reais, Testcontainers):** `evento.finalizado` reentregue → repasse 1x; reembolso em massa + idempotencia; corrida repasse-vs-reembolso → 1 vencedor; `evento.cancelado` cancela inscricoes/ingressos (ticket). Ref: `memory/sprint-5/5a/{architecture,api-contracts,data-model,tests-spec}.md`.
 
+## ADR-T14 — Autorizacao do check-in: papel PROMOTOR + ownership do evento (Sprint 5B)
+**Status:** **Aceita** (Sprint 5B — Arquiteto). Fecha US-034.
+
+**Contexto:** o check-in por QR (`POST /tickets/checkin {codigo_unico}`) deve ser feito **so pelo promotor dono** do evento — papel PROMOTOR sozinho nao basta (qualquer promotor validaria qualquer QR; R4 da spec).
+
+**Decisao definitiva:**
+- **Auth de duas checagens:** `X-User-Papel == PROMOTOR` (403 `Acesso restrito a promotores.` senao) **+ ownership** do evento. O ticket-service faz lookup `Ingresso by codigo_unico` -> `inscricao_id` -> `evento_id`, e descobre o **dono** via `EventClient.getEvento(eventoId)` (canal interno ADR-T08 ja existente) comparando `evento.promotorId() == userId`. Diferente -> **403** `CHECKIN_EVENTO_ALHEIO`. `EventResumo.promotorId()` **ja existe** — nenhum campo novo para a ownership.
+- **Transicao:** `Ingresso.realizarCheckin()` (NOVO, distinto do `utilizar()` idempotente da 5A): `ATIVO -> UTILIZADO`; ja UTILIZADO -> **lanca 409** `INGRESSO_JA_UTILIZADO` (criterio US-034.2, nao no-op). `codigo_unico` inexistente/CANCELADO -> **404** `INGRESSO_NAO_ENCONTRADO`.
+- **Concorrencia (US-034.6):** barreira atomica final = `UNIQUE(ingresso_id)` em `checkins` (ja existe V1) — 2 devices simultaneos: 1 grava `checkins`+UTILIZADO, o outro colide -> 409. Sem duplicata. Gate de teste em **Postgres real** (H2 nao reproduz o row lock — mesmo racional ADR-T07).
+- **Lookup, nao cripto:** consistente com ADR-T09 (UUID v4; check-in = lookup server-side). **Sem divida nova de auth** (`X-User-Papel` ja injetado pelo gateway desde a 5A). **Sem migration** (`checkins` ja existe; `Checkin` entity mapeia tabela existente). Ref: `memory/sprint-5/5b/{architecture,api-contracts,data-model,tests-spec}.md`.
+
+## ADR-T15 — Cancelamento da inscricao + reembolso individual via AMQP + politica de prazo no ticket (Sprint 5B)
+**Status:** **Aceita** (Sprint 5B — Arquiteto). Fecha US-035 + caminho individual de US-042 (`CANCELAMENTO_PARTICIPANTE`).
+
+**Contexto:** participante cancela a propria inscricao (`DELETE /tickets/inscricoes/{id}`). Se PAGO e dentro do prazo, dispara reembolso individual **reusando o mecanismo da 5A** (sem duplicar). Fora do prazo -> bloqueia (PO-D2). Onde checar o prazo? Como disparar o reembolso?
+
+**Decisao definitiva:**
+- **Gatilho do reembolso individual = evento AMQP `inscricao.cancelada`** (NAO chamada sincrona). O ticket publica em `afterCommit` `inscricao.cancelada { eventId(UUID), inscricaoId, usuarioId, eventoId, ocorridoEm }`; o payment consome (idempotente via `processed_events`) e reembolsa **o pagamento daquela inscricao** reusando `findByInscricaoIdForUpdate(inscricaoId)` (lock pessimista; `pagamentos.inscricao_id` e UNIQUE -> 1 pagamento) + `Pagamento.reembolsar()` (CONFIRMADO->REEMBOLSADO, condicional) + `Reembolso.criar(...,'CANCELAMENTO_PARTICIPANTE')` (o factory ja e generico desde a 5A). **Justificativa vs. sincrono (token interno):** consistencia com a 5A (uma unica forma de estornar), desacoplamento/resiliencia (payment fora do ar nao falha o cancelamento — at-least-once + DLQ), idempotencia gratuita (`processed_events`). O extrato e eventualmente consistente, como na 5A — o criterio do PO nao exige sincronia.
+- **Topologia:** consumidor unico (payment) -> **1 fila** `inscricao.cancelada` (+DLQ) — **sem fan-out** (diferente de `evento.cancelado` que tem `.ticket`). Nova fila/binding/DLQ em `definitions.json` + payment RabbitConfig; ticket so produz.
+- **Politica de prazo checada NO TICKET** (antes de cancelar, so para PAGO): dentro do prazo sse `now <= data_inicio - prazo_reembolso_dias`. Fora -> **422** `PRAZO_CANCELAMENTO_ENCERRADO` (PO-D2: bloqueia; inscricao permanece ATIVA; nenhum reembolso). GRATUITO: sempre cancela, sem reembolso (US-035.1). **Dados faltavam:** `EventoInternoResponse`/`EventResumo` passam a expor `dataInicio` + `prazoReembolsoDias` (sem migration — colunas ja existem em `eventos`). Quebra a aridade do record `EventResumo` -> fixtures atualizadas.
+- **Concorrencia (US-035.5):** cancelamento voluntario via `UPDATE inscricoes SET status=CANCELADA WHERE id=? AND status IN (ATIVA,PENDENTE_PAGAMENTO)` (rowsAffected: 1=sucesso, 0=409 `INSCRICAO_JA_CANCELADA`). Distinto do `cancelarPorEvento()` no-op da 5A (consumidor AMQP). 2 cancelamentos simultaneos -> 1 vence, vaga liberada 1x (so o vencedor chama `liberarVaga`, ADR-T07). `inscricao` alheia -> 403 `CANCELAMENTO_DE_OUTRO`.
+- **Corrida individual-vs-massa no mesmo pagamento:** ambos `reembolsar()` condicional sob lock -> 1 vence (invariante: 1 unico estorno por pagamento). **Sem migration** (`reembolsos.motivo` CHECK ja aceita `CANCELAMENTO_PARTICIPANTE` V1; `processed_events` V2). **ACK no-op** (CR-S4-01) p/ pagamento ausente (gratuito) ou nao-CONFIRMADO. Ref: `memory/sprint-5/5b/*`.
+
+## ADR-T16 — Elegibilidade de avaliacao cross-service + reputacao agregada (Sprint 5B)
+**Status:** **Aceita** (Sprint 5B — Arquiteto). Fecha US-024 + US-025.
+
+**Contexto:** o event-service nao conhece inscricoes/check-in (dominio do ticket), mas precisa autorizar quem avalia (PO-D1: ingresso `UTILIZADO` **ou** inscricao `ATIVA` em evento `REALIZADO`). E precisa expor a reputacao (media+total) no detalhe.
+
+**Decisao definitiva:**
+- **Elegibilidade: event-service chama o ticket-service** por canal interno `GET /internal/tickets/participou?usuarioId=&eventoId=` -> `{participou: boolean}`, com `X-Internal-Token` (ADR-T08; 403 senao; gateway nao roteia `/api/internal/**`). **Justificativa vs. inverter (ticket consulta avaliacoes):** a avaliacao e do dominio do event (tabela `avaliacoes` ja vive la, `UNIQUE(evento,usuario)`); o event e quem decide 201/403/409, entao **pergunta** ao ticket "participou?". Surge a 1a chamada **outbound** event->ticket (`TicketClient` + `TicketClientConfig`, espelhando `EventClient`/`EventClientConfig` do ticket: RestClient, timeouts 2s/3s, `defaultHeader X-Internal-Token`, `app.ticket-service.url`).
+- **Regra dividida (PO-D1):** `elegivel = evento.status==REALIZADO (event, pre-filtro local barato) AND ticket.participou (ticket: EXISTS ingresso UTILIZADO OU inscricao ATIVA p/ usuario+evento)`. Inscricao CANCELADA/EXPIRADA -> nao conta. Ingresso UTILIZADO so habilita avaliacao **apos** o evento virar REALIZADO (pre-filtro). Nao-elegivel -> **403** `AVALIACAO_NAO_ELEGIVEL`; 2a avaliacao -> **409** `AVALIACAO_DUPLICADA` (UNIQUE); nota fora 1-5 -> **400** (`@Min/@Max`). `TicketClient` falha **fechada** (503 `TICKET_INDISPONIVEL`, nunca 500).
+- **Reputacao (US-025):** query agregada unica `SELECT new ReputacaoResponse(AVG(a.nota), COUNT(a)) FROM Avaliacao a WHERE a.eventoId=:id` (usa `idx_avaliacoes_evento` V1; **sem N+1**, O(1)). Exposta em `EventoResponse.reputacao = {media:Double|null, total:long}` (null/0 sem avaliacoes), calculada em `EventService.detalhe` **sem cache** (US-025.2). Qualquer autenticado le (US-025.3).
+- **Sem migration** (`avaliacoes` ja existe V1 com UNIQUE+CHECK; `Avaliacao` entity nova mapeia tabela existente). Ref: `memory/sprint-5/5b/*`.
+
 ---
 
 > Toda nova decisão estrutural tomada por um agente durante um sprint é registrada aqui (com referência ao sprint), e recorrências de code review viram regra em `coding-standards.md`.
