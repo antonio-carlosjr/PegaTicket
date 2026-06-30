@@ -48,6 +48,9 @@ class PagamentoServiceIntegrationTest extends TestcontainersBase {
     RabbitTemplate rabbitTemplate;
 
     @Autowired
+    org.springframework.amqp.rabbit.core.RabbitAdmin rabbitAdmin;
+
+    @Autowired
     PagamentoService pagamentoService;
 
     @Autowired
@@ -60,6 +63,11 @@ class PagamentoServiceIntegrationTest extends TestcontainersBase {
     void limpar() {
         pagamentoRepository.deleteAll();
         processedEventRepository.deleteAll();
+        // Isolamento: as 3 classes de integracao compartilham o mesmo contexto/broker.
+        // Tests que confirmam mas nao consomem deixam mensagens em pagamento.aprovado;
+        // purgar as filas garante que cada teste comece com filas vazias.
+        rabbitAdmin.purgeQueue("pagamento.aprovado", false);
+        rabbitAdmin.purgeQueue("pedido.criado", false);
     }
 
     /**
