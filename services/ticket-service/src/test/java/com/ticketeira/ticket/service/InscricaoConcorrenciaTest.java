@@ -6,6 +6,7 @@ import com.ticketeira.ticket.client.EventResumo;
 import com.ticketeira.ticket.domain.Ingresso;
 import com.ticketeira.ticket.domain.Inscricao;
 import com.ticketeira.ticket.dto.InscricaoResponse;
+import com.ticketeira.ticket.messaging.PedidoCriadoPublisher;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +78,9 @@ class InscricaoConcorrenciaTest {
     @MockBean
     EventClient eventClient;
 
+    @MockBean
+    PedidoCriadoPublisher pedidoCriadoPublisher;
+
     private static final Long USUARIO_ID = 1L;
     private static final Long EVENTO_ID = 100L;
 
@@ -86,7 +90,8 @@ class InscricaoConcorrenciaTest {
         inscricaoRepository.deleteAll();
 
         when(eventClient.getEvento(anyLong()))
-                .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100,
+                        null, 1L));
         doNothing().when(eventClient).reservarVaga(anyLong());
         doNothing().when(eventClient).liberarVaga(anyLong());
     }
@@ -155,27 +160,31 @@ class InscricaoConcorrenciaTest {
         assertThat(ingressoRepository.count()).isEqualTo(1);
     }
 
-    // ---- B2: Evento pago/nao-publicado ----
+    // ---- B2: Evento nao-publicado ----
 
     @Test
-    void inscrever_eventoPago_lanca422() {
+    void inscrever_eventoPago_criaPendentePagamento() {
+        // Sprint 4: evento PAGO agora e suportado — cria PENDENTE_PAGAMENTO
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Festival Pago", "PAGO", "PUBLICADO", 10, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Festival Pago", "PAGO", "PUBLICADO", 10, 100,
+                        new java.math.BigDecimal("99.00"), 1L));
 
-        try {
-            inscricaoService.inscrever(EVENTO_ID, USUARIO_ID);
-        } catch (BusinessException ex) {
-            assertThat(ex.getMessage()).isEqualTo("EVENTO_PAGO_NAO_SUPORTADO");
-            assertThat(ex.getStatus()).isEqualTo(422);
-        }
+        org.mockito.Mockito.doNothing().when(pedidoCriadoPublisher)
+                .publicar(org.mockito.ArgumentMatchers.any());
 
-        assertThat(inscricaoRepository.count()).isEqualTo(0);
+        com.ticketeira.ticket.dto.InscricaoResponse resp =
+                inscricaoService.inscrever(EVENTO_ID, USUARIO_ID);
+
+        assertThat(resp.status()).isEqualTo("PENDENTE_PAGAMENTO");
+        assertThat(inscricaoRepository.count()).isEqualTo(1);
+        assertThat(ingressoRepository.count()).isZero();
     }
 
     @Test
     void inscrever_eventoNaoPublicado_lanca422() {
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100,
+                        null, 1L));
 
         try {
             inscricaoService.inscrever(EVENTO_ID, USUARIO_ID);

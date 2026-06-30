@@ -2,6 +2,7 @@ package com.ticketeira.ticket.controller;
 
 import com.ticketeira.ticket.client.EventClient;
 import com.ticketeira.ticket.client.EventResumo;
+import com.ticketeira.ticket.messaging.PedidoCriadoPublisher;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +61,9 @@ class InternalEventAuthTest {
 
     @MockBean
     EventClient eventClient;
+
+    @MockBean
+    PedidoCriadoPublisher pedidoCriadoPublisher;
 
     @BeforeEach
     void setUp() {

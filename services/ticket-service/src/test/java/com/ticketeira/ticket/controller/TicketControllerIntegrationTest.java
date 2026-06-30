@@ -5,6 +5,7 @@ import com.ticketeira.ticket.client.EventClient;
 import com.ticketeira.ticket.client.EventResumo;
 import com.ticketeira.ticket.domain.Ingresso;
 import com.ticketeira.ticket.domain.Inscricao;
+import com.ticketeira.ticket.messaging.PedidoCriadoPublisher;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,9 @@ class TicketControllerIntegrationTest {
     @MockBean
     EventClient eventClient;
 
+    @MockBean
+    PedidoCriadoPublisher pedidoCriadoPublisher;
+
     private static final Long USUARIO_ID = 10L;
     private static final Long EVENTO_ID = 42L;
 
@@ -59,7 +63,8 @@ class TicketControllerIntegrationTest {
         inscricaoRepository.deleteAll();
 
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100,
+                        null, 1L));
         doNothing().when(eventClient).reservarVaga(anyLong());
         doNothing().when(eventClient).liberarVaga(anyLong());
     }
@@ -150,7 +155,8 @@ class TicketControllerIntegrationTest {
         // Inscreve em 2 eventos diferentes
         Long evento2 = 43L;
         when(eventClient.getEvento(evento2))
-                .thenReturn(new EventResumo(evento2, "Show 2", "GRATUITO", "PUBLICADO", 5, 50));
+                .thenReturn(new EventResumo(evento2, "Show 2", "GRATUITO", "PUBLICADO", 5, 50,
+                        null, 1L));
 
         mvc.perform(post("/tickets/inscricoes")
                         .header("X-User-Id", USUARIO_ID)

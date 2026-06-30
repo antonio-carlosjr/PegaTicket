@@ -27,6 +27,9 @@ app:
     url: ${EVENT_SERVICE_URL:http://localhost:8082}
   internal:
     token: ${INTERNAL_TOKEN:dev-internal-secret}
+  reserva:
+    ttl-min: ${RESERVA_TTL_MIN:30}
+    job-delay-ms: ${RESERVA_JOB_DELAY_MS:300000}  # 5 min entre execucoes
 
 server:
   port: 8083

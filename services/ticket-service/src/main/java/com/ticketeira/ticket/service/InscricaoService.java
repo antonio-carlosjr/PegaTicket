@@ -8,6 +8,9 @@ import com.ticketeira.ticket.domain.Inscricao;
 import com.ticketeira.ticket.dto.InscricaoHistoricoResponse;
 import com.ticketeira.ticket.dto.InscricaoResponse;
 import com.ticketeira.ticket.dto.MeuIngressoResponse;
+import com.ticketeira.ticket.dto.PagamentoPendenteResponse;
+import com.ticketeira.ticket.messaging.PedidoCriadoEvent;
+import com.ticketeira.ticket.messaging.PedidoCriadoPublisher;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import org.slf4j.Logger;
@@ -19,24 +22,32 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
 /**
- * Orquestra a mini-saga sincrona cross-service (ticket→event).
- * Ordem definitiva: validar evento → pre-check → reservar vaga → tx local → compensar se falhou.
+ * Orquestra a saga de inscricao (GRATUITO e PAGO).
+ *
+ * GRATUITO (S3, inalterado): valida PUBLICADO+GRATUITO → pre-check → reservarVaga → tx local
+ *   cria Inscricao(ATIVA) + Ingresso imediato. Sem mensageria.
+ *
+ * PAGO (S4): valida PUBLICADO+PAGO → pre-check → reservarVaga → tx local cria
+ *   Inscricao(PENDENTE_PAGAMENTO) SEM ingresso → afterCommit publica pedido.criado.
+ *   Ingresso e emitido pelo PagamentoAprovadoListener ao receber pagamento.aprovado.
  *
  * Estrategia de concorrencia:
- *   - Overbooking: UPDATE atomico no event-service (rowsAffected) — ADR-T07
- *   - Dupla inscricao: UNIQUE(usuario_id,evento_id) + captura DataIntegrityViolationException — ADR-T07
- *   - Ingresso unico: UNIQUE(inscricao_id) na mesma tx local
+ *   - Overbooking: UPDATE atomico no event-service (ADR-T07) — rowsAffected = 0 → 409
+ *   - Dupla inscricao: UNIQUE(usuario_id,evento_id) + DataIntegrityViolationException → 409
+ *   - Compensacao: liberarVaga() em falha da tx local
  *
- * Nota de design: inscrever() NAO e @Transactional — a tx local (passo 3) e criada via
- * TransactionTemplate para permitir captura de DataIntegrityViolationException FORA
- * da transacao (com Spring AOP, excecoes dentro de @Transactional sao re-lancadas apos
- * rollback; o DataIntegrityViolationException so e visivel apos o flush/commit, entao
- * precisamos que a tx encerre antes do catch da compensacao).
+ * Nota de design: inscrever() NAO e @Transactional — a tx local e REQUIRES_NEW via
+ * TransactionTemplate para encerrar antes do catch de compensacao e para registrar o
+ * afterCommit (TransactionSynchronizationManager) que publica pedido.criado.
  */
 @Service
 public class InscricaoService {
@@ -46,49 +57,56 @@ public class InscricaoService {
     private final InscricaoRepository inscricaoRepository;
     private final IngressoRepository ingressoRepository;
     private final EventClient eventClient;
+    private final PedidoCriadoPublisher pedidoCriadoPublisher;
     private final TransactionTemplate txTemplate;
 
     public InscricaoService(InscricaoRepository inscricaoRepository,
                             IngressoRepository ingressoRepository,
                             EventClient eventClient,
+                            PedidoCriadoPublisher pedidoCriadoPublisher,
                             PlatformTransactionManager txManager) {
         this.inscricaoRepository = inscricaoRepository;
         this.ingressoRepository = ingressoRepository;
         this.eventClient = eventClient;
+        this.pedidoCriadoPublisher = pedidoCriadoPublisher;
         this.txTemplate = new TransactionTemplate(txManager);
         this.txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     /**
-     * Mini-saga: inscreve usuario em evento GRATUITO publicado.
-     *
-     * PASSO 1: Valida evento (existe, PUBLICADO, GRATUITO) — sem efeito se falhar.
-     * PASSO 1.5: Pre-check de duplicidade (otimizacao, nao defesa contra corrida).
-     * PASSO 2: Reserva vaga (decremento atomico) — nao-idempotente, nao re-tentar.
-     * PASSO 3: TX local (REQUIRES_NEW via TransactionTemplate) — cria Inscricao + Ingresso.
-     *          Se falhar: COMPENSA via liberarVaga; se compensacao falhar: loga ERROR.
-     * PASSO 4: Retorna 201 InscricaoResponse.
+     * Inscreve o usuario num evento PUBLICADO (GRATUITO ou PAGO).
+     * Ramo GRATUITO: emite ingresso imediato (S3, inalterado).
+     * Ramo PAGO: cria PENDENTE_PAGAMENTO, publica pedido.criado em afterCommit.
      */
     public InscricaoResponse inscrever(Long eventoId, Long usuarioId) {
-        // PASSO 1 — validar evento
+        // PASSO 1 — validar evento (PUBLICADO; tipo determina o ramo)
         EventResumo evento = eventClient.getEvento(eventoId);
 
         if (!"PUBLICADO".equals(evento.status())) {
             throw new BusinessException("EVENTO_NAO_PUBLICADO", 422);
         }
-        if (!"GRATUITO".equals(evento.tipo())) {
-            throw new BusinessException("EVENTO_PAGO_NAO_SUPORTADO", 422);
-        }
 
-        // PASSO 1.5 — pre-check de duplicidade (evita gastar vaga no caso comum)
+        // PASSO 1.5 — pre-check de duplicidade (otimizacao; defesa final e o UNIQUE)
         if (inscricaoRepository.existsByUsuarioIdAndEventoId(usuarioId, eventoId)) {
             throw new BusinessException("JA_INSCRITO", 409);
         }
 
-        // PASSO 2 — reservar vaga (decremento atomico; nao-idempotente: nao re-tentar)
+        // PASSO 2 — reservar vaga (decremento atomico; nao-idempotente, nao re-tentar)
         eventClient.reservarVaga(eventoId);
 
-        // PASSO 3 — tx local atomica (REQUIRES_NEW): INSERT inscricao + INSERT ingresso
+        // PASSO 3 — bifurca por tipo
+        if ("PAGO".equals(evento.tipo())) {
+            return inscreverPago(evento, usuarioId);
+        } else {
+            return inscreverGratuito(eventoId, usuarioId);
+        }
+    }
+
+    /**
+     * Ramo GRATUITO (S3): TX local cria Inscricao(ATIVA) + Ingresso imediato.
+     * Sem mensageria.
+     */
+    private InscricaoResponse inscreverGratuito(Long eventoId, Long usuarioId) {
         try {
             return txTemplate.execute(status -> {
                 Inscricao inscricao = inscricaoRepository.save(Inscricao.criar(usuarioId, eventoId));
@@ -96,11 +114,61 @@ public class InscricaoService {
                 return InscricaoResponse.from(inscricao, ingresso);
             });
         } catch (DataIntegrityViolationException e) {
-            // UNIQUE(usuario_id,evento_id): corrida — dupla inscricao paralela passou no pre-check
             compensar(eventoId, usuarioId, e);
             throw new BusinessException("JA_INSCRITO", 409);
         } catch (Exception e) {
             compensar(eventoId, usuarioId, e);
+            throw new BusinessException("EVENTO_INDISPONIVEL", 503);
+        }
+    }
+
+    /**
+     * Ramo PAGO (S4): TX local cria Inscricao(PENDENTE_PAGAMENTO) sem ingresso.
+     * afterCommit publica pedido.criado com preco e promotorId do evento.
+     */
+    private InscricaoResponse inscreverPago(EventResumo evento, Long usuarioId) {
+        try {
+            return txTemplate.execute(txStatus -> {
+                Inscricao inscricao = inscricaoRepository.save(
+                        Inscricao.pendentePagamento(usuarioId, evento.id()));
+
+                // Monta o evento ANTES do afterCommit para capturar o id da inscricao salva
+                PedidoCriadoEvent pedido = new PedidoCriadoEvent(
+                        UUID.randomUUID(),
+                        inscricao.getId(),
+                        usuarioId,
+                        evento.id(),
+                        evento.preco(),
+                        evento.promotorId(),
+                        OffsetDateTime.now());
+
+                // Publica somente apos o commit — se a tx fizer rollback, nao sai nada.
+                // Se nao ha gerenciamento de sincronizacao ativo (ex.: testes unitarios com TX mockada),
+                // publica diretamente (a tx real nao existe para fazer rollback de qualquer forma).
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(
+                            new TransactionSynchronization() {
+                                @Override
+                                public void afterCommit() {
+                                    pedidoCriadoPublisher.publicar(pedido);
+                                }
+                            });
+                } else {
+                    pedidoCriadoPublisher.publicar(pedido);
+                }
+
+                PagamentoPendenteResponse pagamento = new PagamentoPendenteResponse(
+                        inscricao.getId(),
+                        evento.preco(),
+                        "AGUARDANDO");
+
+                return InscricaoResponse.fromPago(inscricao, pagamento);
+            });
+        } catch (DataIntegrityViolationException e) {
+            compensar(evento.id(), usuarioId, e);
+            throw new BusinessException("JA_INSCRITO", 409);
+        } catch (Exception e) {
+            compensar(evento.id(), usuarioId, e);
             throw new BusinessException("EVENTO_INDISPONIVEL", 503);
         }
     }
