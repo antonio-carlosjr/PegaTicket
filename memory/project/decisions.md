@@ -53,7 +53,7 @@
 **Status:** Proposta (dívida). `JwtAuthGlobalFilter` usa `startsWith`, casando prefixos demais (ex.: `/api/auth/register-x`). **Decisão:** trocar por match exato no próximo toque no gateway.
 
 ## ADR-T04 — Consumidores RabbitMQ não implementados
-**Status:** Proposta (dívida). Topologia declarada (`definitions.json`), mas sem `@RabbitListener`/`RabbitTemplate`. **Decisão:** ao implementar (US-060), todo consumidor é idempotente via `processed_events(event_id)`; produtor publica em `afterCommit`.
+**Status:** **Aceita / Implementada na Sprint 4 (US-060).** Topologia já declarada (`definitions.json`). A S4 liga os consumidores: `pedido.criado` (payment-service) e `pagamento.aprovado` (ticket-service), **idempotentes** via `processed_events(event_id UUID)` (PK = chave de dedup do payload), com produtor publicando em `afterCommit` (`TransactionSynchronization`). O padrão concreto está fechado no **ADR-T11**. Ref: `memory/sprint-4/{architecture,api-contracts,data-model,tests-spec}.md`.
 
 ## ADR-T05 — Seed de admin dev-only
 **Status:** Proposta (dívida, Sprint 1). A migration V3 semeia 1 admin (`admin@pegaticket.local`) com hash de senha **em claro no repo**, só para dev/demo. **Decisão:** tornar a credencial env-driven / processo de bootstrap seguro antes de produção (remover o seed ou parametrizar). Ref: `memory/sprint-1/00-sprint-spec.md` §4.
@@ -92,6 +92,30 @@ Justificativa:
 - **Impacto Sprint 5:** check-in faz lookup por `codigo_unico`, marca `ingressos.status=UTILIZADO` + cria `checkins` (`UNIQUE(ingresso_id)` impede duplo check-in). Migrar para HMAC no futuro **invalidaria QRs já emitidos** → por isso a decisão UUID é registrada como definitiva para o escopo atual.
 
 **QR:** o **frontend** renderiza a imagem a partir da string `codigo_unico` (lib JS nova — `qrcode.react` recomendada, justificar em `frontend-log.md`). **Backend NÃO gera imagem.**
+
+## ADR-T10 — Saga de inscrição paga (estados, política de vaga reservada, modelo user-confirm)
+**Status:** **Aceita** (Sprint 4 — Arquiteto).
+
+**Contexto:** inscrição em evento PAGO não pode emitir ingresso antes do pagamento, mas a vaga precisa ser reservada **antes** de pagar (anti-overbooking, ADR-T07). Isso cria o risco R1: pagamento abandonado deixa a vaga presa indefinidamente.
+
+**Decisão definitiva:**
+- **Saga assíncrona orientada a eventos** (RabbitMQ), não síncrona. Estados de `inscricoes.status`: `PENDENTE_PAGAMENTO` (vaga reservada, **sem ingresso**) → `ATIVA` (após `pagamento.aprovado`, ingresso emitido) ou `EXPIRADA` (TTL). GRATUITO continua `ATIVA` imediata (S3 intacto).
+- **Ordem:** validar (PUBLICADO, PAGO, lê `preco`) → pre-check dup → `reservarVaga` (UPDATE atômico, ADR-T07) → tx local cria `Inscricao(PENDENTE_PAGAMENTO)` → `afterCommit` publica `pedido.criado`. Payment consome, cria `Pagamento(PENDENTE)` + computa escrow. Usuário confirma → payment publica `pagamento.aprovado` → ticket emite `Ingresso` + `Inscricao→ATIVA`.
+- **Modelo de pagamento: confirmação iniciada pelo usuário** (`POST /payments/{inscricaoId}/confirmar`, 1 toque, gateway **SIMULADO** aprova) — não auto-aprovação; mais realista e demonstrável na banca.
+- **Política da vaga reservada (R1): TTL via job agendado.** `ExpiracaoReservaJob` (`@Scheduled`) expira `PENDENTE_PAGAMENTO` mais velhas que `app.reserva.ttl-min` (default 30 min) → `EXPIRADA` + `liberarVaga` (compensação ADR-T07). Idempotente (índice parcial `idx_inscricoes_pendentes`). **Escolhido sobre "gap documentado"** porque a vaga presa fere o critério do PO (capacidade real do evento) e o custo é baixo (1 job + 1 query indexada); para o escopo acadêmico é a mitigação correta sem over-engineering (sem token de reserva, sem state machine externa).
+- **Gap aceitável residual (R6):** confirmação que chega **após** a expiração retorna `INSCRICAO_EXPIRADA` (409) sem emitir ingresso — documentado como aceitável.
+- **Escrow:** o escrow aqui apenas **retém** (`pagamentos.status=CONFIRMADO`); `valor_taxa=round(bruto*0.10,2)`, `valor_repasse=bruto−taxa` são computados e **não liberados**. Reembolso/repasse = Sprint 5 (ADR-P10/P11).
+
+## ADR-T11 — Idempotência de consumidores AMQP (`processed_events` + `afterCommit`)
+**Status:** **Aceita** (Sprint 4 — Arquiteto). Concretiza o ADR-T04.
+
+**Decisão definitiva:**
+- **`event_id` (UUID) gerado na ORIGEM** (produtor, `UUID.randomUUID()`) e carregado no payload (`PedidoCriadoEvent`, `PagamentoAprovadoEvent`). É a chave de idempotência.
+- **Tabela `processed_events(event_id UUID PK, routing_key, processado_em)` por serviço consumidor** (ticket + payment). O consumidor, **na mesma transação do efeito**, faz `INSERT processed_events(event_id)`: se a PK colidir (2ª entrega at-least-once), a tx desfaz e o consumidor faz **ACK** (no-op, sem efeito duplo).
+- **Produtor publica só em `afterCommit`** (`TransactionSynchronizationManager.registerSynchronization`) — se a tx local fizer rollback, o evento nunca sai (testado forçando rollback).
+- **Defesa em profundidade (exactly-once-effect):** as constraints UNIQUE existentes `ingressos.inscricao_id` e `pagamentos.inscricao_id` são a rede final, cobrindo até reprocessamento manual com `event_id` diferente.
+- **Confirmar pagamento 2×:** transição `PENDENTE→CONFIRMADO` idempotente (no-op se já CONFIRMADO) → publica `pagamento.aprovado` **1×** apenas. Lock pessimista no `findByInscricaoId` serializa confirmações concorrentes.
+- **Gate de teste:** reentrega de `pagamento.aprovado` → 1 ingresso; reentrega de `pedido.criado` → 1 pagamento; rollback não publica — **em RabbitMQ + Postgres reais** (Testcontainers, `disabledWithoutDocker=true`). Ref: `memory/sprint-4/tests-spec.md` §A3/A5/B1/B4.
 
 ---
 
