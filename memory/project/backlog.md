@@ -37,8 +37,8 @@
 ## Épico C — Pagamentos & Escrow (payment-service) · RF05, RF06
 | ID | História | Estado |
 |---|---|---|
-| US-040 | Como participante, quero pagar um evento pago (gateway simulado) com retenção em escrow | SPRINT-4 |
-| US-041 | Como sistema, quero emitir o ingresso só após `pagamento.aprovado` (saga de inscrição paga) | SPRINT-4 |
+| US-040 | Como participante, quero pagar um evento pago (gateway simulado) com retenção em escrow | DONE |
+| US-041 | Como sistema, quero emitir o ingresso só após `pagamento.aprovado` (saga de inscrição paga) | DONE |
 | US-042 | Como participante, quero ser reembolsado se o evento for cancelado | SPRINT-5 |
 | US-043 | Como promotor, quero receber o repasse (menos taxa de 10%) após o evento finalizado | SPRINT-5 |
 
@@ -54,7 +54,7 @@
 ## Épico E — Plataforma · RNF09
 | ID | História | Estado |
 |---|---|---|
-| US-060 | Como time, quero consumidores RabbitMQ idempotentes (`processed_events`) ligados | SPRINT-4 |
+| US-060 | Como time, quero consumidores RabbitMQ idempotentes (`processed_events`) ligados | DONE |
 | US-061 | Como time, quero testes de carga no abre-vendas (concorrência de inscrição) | SPRINT-5 |
 | US-062 | Como time, quero observabilidade básica (health/readiness, métricas, logs estruturados) | BACKLOG |
 | US-063 | Como time, quero fechar dívidas pré-banca (whitelist do gateway, seed admin env-driven, follow-ups TECH-S3) | BACKLOG |
