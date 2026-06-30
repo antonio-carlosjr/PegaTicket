@@ -7,9 +7,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
@@ -37,6 +39,38 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         ErrorResponse body = ErrorResponse.of(400, "Bad Request", msg, req.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Parametro de path/query malformado (ex.: inscricaoId nao-numerico, status invalido em @RequestParam
+     * convertido para enum). Cliente errou a entrada -> 400, nunca 500. (coding-standards / CR-S3-03)
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest req) {
+        String msg = "Parametro '" + ex.getName() + "' com valor invalido.";
+        ErrorResponse body = ErrorResponse.of(400, "Bad Request", msg, req.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    /**
+     * Valor de enum invalido em filtro (StatusPagamento.valueOf) e outros argumentos invalidos
+     * vindos do cliente. Sem este handler, o catch-all transformaria em 500.
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex, HttpServletRequest req) {
+        ErrorResponse body = ErrorResponse.of(400, "Bad Request",
+                "Parametro de requisicao invalido.", req.getRequestURI());
+        return ResponseEntity.badRequest().body(body);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest req) {
+        ErrorResponse body = ErrorResponse.of(400, "Bad Request",
+                "Corpo da requisicao invalido.", req.getRequestURI());
         return ResponseEntity.badRequest().body(body);
     }
 
