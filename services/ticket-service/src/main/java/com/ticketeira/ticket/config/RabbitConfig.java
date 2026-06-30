@@ -34,6 +34,10 @@ public class RabbitConfig {
     static final String QUEUE_PEDIDO_CRIADO = "pedido.criado";
     static final String QUEUE_PAGAMENTO_APROVADO = "pagamento.aprovado";
 
+    // Fila dedicada do fan-out evento.cancelado (rk: evento.cancelado -> fila: evento.cancelado.ticket)
+    static final String QUEUE_EVENTO_CANCELADO_TK = "evento.cancelado.ticket";
+    static final String RK_EVENTO_CANCELADO = "evento.cancelado";
+
     @Bean
     public TopicExchange ticketeiraEvents() {
         return new TopicExchange(EXCHANGE, true, false);
@@ -96,6 +100,35 @@ public class RabbitConfig {
         return BindingBuilder.bind(filaPagamentoAprovadoDlq())
                 .to(tickeiraDlx())
                 .with(QUEUE_PAGAMENTO_APROVADO);
+    }
+
+    // --- evento.cancelado.ticket (fan-out US-042) --------------------------------
+
+    @Bean
+    public Queue filaEventoCanceladoTicket() {
+        return QueueBuilder.durable(QUEUE_EVENTO_CANCELADO_TK)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", QUEUE_EVENTO_CANCELADO_TK)
+                .build();
+    }
+
+    @Bean
+    public Queue filaEventoCanceladoTicketDlq() {
+        return QueueBuilder.durable(QUEUE_EVENTO_CANCELADO_TK + ".dlq").build();
+    }
+
+    @Bean
+    public Binding bindingEventoCanceladoTicket() {
+        return BindingBuilder.bind(filaEventoCanceladoTicket())
+                .to(ticketeiraEvents())
+                .with(RK_EVENTO_CANCELADO);
+    }
+
+    @Bean
+    public Binding bindingEventoCanceladoTicketDlq() {
+        return BindingBuilder.bind(filaEventoCanceladoTicketDlq())
+                .to(tickeiraDlx())
+                .with(QUEUE_EVENTO_CANCELADO_TK);
     }
 
     // O RabbitTemplate e o ConnectionFactory sao auto-configurados pelo Spring Boot

@@ -2,6 +2,7 @@ package com.ticketeira.ticket.repository;
 
 import com.ticketeira.ticket.domain.Ingresso;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,4 +40,14 @@ public interface IngressoRepository extends JpaRepository<Ingresso, Long> {
             ORDER BY ins.inscritoEm DESC
             """)
     List<Object[]> findIngressoComInscricaoByUsuarioId(@Param("userId") Long userId);
+
+    /**
+     * Cancela em massa os ingressos ATIVO das inscricoes de um evento (US-042).
+     * Preserva UTILIZADO (historico de check-in). UPDATE condicional via subquery.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Ingresso ing SET ing.status = com.ticketeira.ticket.domain.StatusIngresso.CANCELADO "
+         + "WHERE ing.status = com.ticketeira.ticket.domain.StatusIngresso.ATIVO "
+         + "AND ing.inscricaoId IN (SELECT i.id FROM Inscricao i WHERE i.eventoId = :eventoId)")
+    int cancelarIngressosDoEvento(@Param("eventoId") Long eventoId);
 }

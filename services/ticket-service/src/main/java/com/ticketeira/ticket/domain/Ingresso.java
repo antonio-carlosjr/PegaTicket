@@ -44,6 +44,31 @@ public class Ingresso {
         return ing;
     }
 
+    /**
+     * Marca o ingresso como UTILIZADO (check-in).
+     * Idempotente: no-op se ja UTILIZADO. Lanca em estado CANCELADO
+     * (nao faz sentido dar check-in num ingresso cancelado).
+     */
+    public void utilizar() {
+        if (status == StatusIngresso.UTILIZADO) return;
+        if (status == StatusIngresso.CANCELADO) {
+            throw new IllegalStateException("Ingresso cancelado nao pode ser utilizado.");
+        }
+        this.status = StatusIngresso.UTILIZADO;
+    }
+
+    /**
+     * Cancela o ingresso em decorrencia de cancelamento do evento (US-042).
+     * Idempotente: no-op (false) se ja CANCELADO ou UTILIZADO — preserva historico de check-in.
+     */
+    public boolean cancelar() {
+        if (status == StatusIngresso.ATIVO) {
+            this.status = StatusIngresso.CANCELADO;
+            return true;
+        }
+        return false;
+    }
+
     public Long getId() { return id; }
     public Long getInscricaoId() { return inscricaoId; }
     public String getCodigoUnico() { return codigoUnico; }
