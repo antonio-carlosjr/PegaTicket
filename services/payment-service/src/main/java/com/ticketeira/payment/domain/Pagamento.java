@@ -24,6 +24,12 @@ public class Pagamento {
     @Column(name = "usuario_id", nullable = false)
     private Long usuarioId;
 
+    @Column(name = "evento_id")
+    private Long eventoId;
+
+    @Column(name = "promotor_id")
+    private Long promotorId;
+
     @Column(name = "valor_bruto", nullable = false)
     private BigDecimal valorBruto;
 
@@ -49,20 +55,34 @@ public class Pagamento {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private OffsetDateTime criadoEm;
 
+    @Column(name = "repassado_em")
+    private OffsetDateTime repassadoEm;
+
+    @Column(name = "reembolsado_em")
+    private OffsetDateTime reembolsadoEm;
+
     protected Pagamento() {}
 
     /**
-     * Factory: cria pagamento PENDENTE com escrow computado.
-     * valorTaxa = round(valorBruto * taxaPercentual, 2, HALF_UP)
-     * valorRepasse = valorBruto - valorTaxa
+     * Factory legada (4 params): compatibilidade com testes unitarios pre-S5A.
+     * Delega ao factory principal com eventoId/promotorId nulos.
      */
     public static Pagamento pendente(Long inscricaoId, Long usuarioId,
+                                     BigDecimal valorBruto, BigDecimal taxaPercentual) {
+        return pendente(inscricaoId, usuarioId, null, null, valorBruto, taxaPercentual);
+    }
+
+    /**
+     * Factory principal: cria pagamento PENDENTE com escrow computado e vinculo ao evento/promotor.
+     * eventoId/promotorId vindos do PedidoCriadoEvent (TECH-S4-01).
+     */
+    public static Pagamento pendente(Long inscricaoId, Long usuarioId, Long eventoId, Long promotorId,
                                      BigDecimal valorBruto, BigDecimal taxaPercentual) {
         Pagamento p = new Pagamento();
         p.inscricaoId = inscricaoId;
         p.usuarioId = usuarioId;
-        // Normaliza para 2 casas (dinheiro): o valor pode chegar com escala 0/1
-        // (ex.: preco 100.0) e a coluna e NUMERIC(12,2). Sem isto o JSON sai "100.0".
+        p.eventoId = eventoId;
+        p.promotorId = promotorId;
         p.valorBruto = valorBruto.setScale(2, RoundingMode.HALF_UP);
         p.valorTaxa = p.valorBruto.multiply(taxaPercentual).setScale(2, RoundingMode.HALF_UP);
         p.valorRepasse = p.valorBruto.subtract(p.valorTaxa);
@@ -86,11 +106,33 @@ public class Pagamento {
         return true;
     }
 
+    /**
+     * CONFIRMADO -> REPASSADO. Idempotente/condicional: retorna false se nao estava CONFIRMADO.
+     */
+    public boolean repassar() {
+        if (this.status != StatusPagamento.CONFIRMADO) return false;
+        this.status = StatusPagamento.REPASSADO;
+        this.repassadoEm = OffsetDateTime.now();
+        return true;
+    }
+
+    /**
+     * CONFIRMADO -> REEMBOLSADO. Idempotente/condicional: retorna false se nao estava CONFIRMADO.
+     */
+    public boolean reembolsar() {
+        if (this.status != StatusPagamento.CONFIRMADO) return false;
+        this.status = StatusPagamento.REEMBOLSADO;
+        this.reembolsadoEm = OffsetDateTime.now();
+        return true;
+    }
+
     // --- getters (sem setters publicos — mutacao via metodos de dominio) ---
 
     public Long getId() { return id; }
     public Long getInscricaoId() { return inscricaoId; }
     public Long getUsuarioId() { return usuarioId; }
+    public Long getEventoId() { return eventoId; }
+    public Long getPromotorId() { return promotorId; }
     public BigDecimal getValorBruto() { return valorBruto; }
     public BigDecimal getValorTaxa() { return valorTaxa; }
     public BigDecimal getValorRepasse() { return valorRepasse; }
@@ -99,4 +141,6 @@ public class Pagamento {
     public String getGatewayPaymentId() { return gatewayPaymentId; }
     public OffsetDateTime getProcessadoEm() { return processadoEm; }
     public OffsetDateTime getCriadoEm() { return criadoEm; }
+    public OffsetDateTime getRepassadoEm() { return repassadoEm; }
+    public OffsetDateTime getReembolsadoEm() { return reembolsadoEm; }
 }

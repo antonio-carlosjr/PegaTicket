@@ -3,11 +3,12 @@ package com.ticketeira.payment.domain;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 
 /**
- * Entidade mapeada apenas para satisfazer ddl-auto:validate (tabela reembolsos existe no V1).
- * Sem escrita neste sprint (S4) — operacoes de reembolso sao implementadas no S5.
+ * Entidade de reembolso. Sprint 5A: passa a ser escrita (EventoCanceladoListener).
+ * motivo: 'EVENTO_CANCELADO' (5A) | 'CANCELAMENTO_PARTICIPANTE' (5B).
  */
 @Entity
 @Table(name = "reembolsos")
@@ -39,6 +40,22 @@ public class Reembolso {
     private OffsetDateTime processadoEm;
 
     protected Reembolso() {}
+
+    /**
+     * Factory para criacao de reembolso simulado (status imediato = PROCESSADO).
+     * valor recebe setScale(2, HALF_UP) — escala monetaria obrigatoria.
+     */
+    public static Reembolso criar(Long pagamentoId, Long usuarioId, BigDecimal valor, String motivo) {
+        Reembolso r = new Reembolso();
+        r.pagamentoId = pagamentoId;
+        r.usuarioId = usuarioId;
+        r.valor = valor.setScale(2, RoundingMode.HALF_UP);
+        r.motivo = motivo;
+        r.status = "PROCESSADO";
+        r.solicitadoEm = OffsetDateTime.now();
+        r.processadoEm = OffsetDateTime.now();
+        return r;
+    }
 
     public Long getId() { return id; }
     public Long getPagamentoId() { return pagamentoId; }
