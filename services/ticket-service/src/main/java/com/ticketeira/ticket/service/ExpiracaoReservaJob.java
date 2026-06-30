@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -37,11 +36,15 @@ public class ExpiracaoReservaJob {
     }
 
     /**
-     * Executado periodicamente (fixedDelay configuravel via app.reserva.ttl-min).
+     * Executado periodicamente (fixedDelay configuravel via app.reserva.job-delay-ms).
      * Busca pendentes vencidas e as expira, liberando as vagas correspondentes.
+     *
+     * Nota de design: o metodo NAO e @Transactional. Cada expiracao roda em sua propria tx
+     * curta (expirarUmaInscricao) e a chamada HTTP de compensacao (liberarVaga) acontece FORA
+     * de qualquer transacao — caso contrario o lock de linha da inscricao ficaria preso durante
+     * todas as N chamadas de rede ao event-service (latencia de I/O segurando recurso de banco).
      */
     @Scheduled(fixedDelayString = "${app.reserva.job-delay-ms:300000}")
-    @Transactional
     public void executar() {
         OffsetDateTime corte = OffsetDateTime.now().minusMinutes(ttlMinutos);
         List<Inscricao> vencidas = inscricaoRepository.findPendentesExpiradas(corte);
@@ -54,25 +57,40 @@ public class ExpiracaoReservaJob {
                 vencidas.size(), ttlMinutos);
 
         for (Inscricao inscricao : vencidas) {
-            try {
-                inscricao.expirar();
-                inscricaoRepository.save(inscricao);
-                liberarVagaComLog(inscricao);
-            } catch (Exception e) {
-                // Inscricao ja em outro estado (ex.: ativada entre a query e o expirar) — seguro ignorar
-                log.warn("Nao foi possivel expirar inscricaoId={}: {}", inscricao.getId(), e.getMessage());
+            // 1) transicao de estado persistida pelo save (tx propria do Spring Data, curta, sem I/O)
+            boolean expirou = expirarUmaInscricao(inscricao);
+            // 2) compensacao (HTTP) so apos persistir o estado EXPIRADA, fora de qualquer tx
+            //    — evita segurar lock/conexao de banco durante a chamada de rede ao event-service.
+            if (expirou) {
+                liberarVagaComLog(inscricao.getId(), inscricao.getEventoId());
             }
         }
     }
 
-    private void liberarVagaComLog(Inscricao inscricao) {
+    /**
+     * Transiciona PENDENTE_PAGAMENTO -> EXPIRADA e persiste. O save abre sua propria transacao
+     * (comportamento padrao do Spring Data) — curta e sem nenhuma I/O de rede dentro dela.
+     * Retorna true se a transicao ocorreu (ha vaga a liberar via compensacao).
+     */
+    private boolean expirarUmaInscricao(Inscricao inscricao) {
         try {
-            eventClient.liberarVaga(inscricao.getEventoId());
-            log.info("Vaga liberada por TTL: inscricaoId={} eventoId={}",
-                    inscricao.getId(), inscricao.getEventoId());
+            inscricao.expirar();
+            inscricaoRepository.save(inscricao);
+            return true;
+        } catch (Exception e) {
+            // Inscricao ja em outro estado (ex.: ativada entre a query e o expirar) — seguro ignorar
+            log.warn("Nao foi possivel expirar inscricaoId={}: {}", inscricao.getId(), e.getMessage());
+            return false;
+        }
+    }
+
+    private void liberarVagaComLog(Long inscricaoId, Long eventoId) {
+        try {
+            eventClient.liberarVaga(eventoId);
+            log.info("Vaga liberada por TTL: inscricaoId={} eventoId={}", inscricaoId, eventoId);
         } catch (Exception e) {
             log.error("[RECONCILIACAO] Falha ao liberar vaga por TTL: inscricaoId={} eventoId={}: {}",
-                    inscricao.getId(), inscricao.getEventoId(), e.getMessage());
+                    inscricaoId, eventoId, e.getMessage());
         }
     }
 }

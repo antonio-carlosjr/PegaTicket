@@ -189,7 +189,13 @@ public class InscricaoService {
     public List<MeuIngressoResponse> meusIngressos(Long usuarioId) {
         return ingressoRepository.findIngressoComInscricaoByUsuarioId(usuarioId)
                 .stream()
-                .map(row -> MeuIngressoResponse.from((Ingresso) row[0], (Inscricao) row[1]))
+                .map(row -> {
+                    Inscricao inscricao = (Inscricao) row[0];
+                    Ingresso ingresso = (Ingresso) row[1];   // null quando PENDENTE_PAGAMENTO (LEFT JOIN)
+                    return ingresso != null
+                            ? MeuIngressoResponse.from(ingresso, inscricao)
+                            : MeuIngressoResponse.fromPendente(inscricao);
+                })
                 .toList();
     }
 

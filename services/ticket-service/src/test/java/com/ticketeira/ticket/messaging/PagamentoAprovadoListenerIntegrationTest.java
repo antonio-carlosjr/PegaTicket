@@ -152,6 +152,35 @@ class PagamentoAprovadoListenerIntegrationTest extends TestcontainersBase {
     }
 
     @Test
+    @DisplayName("A3.d — pagamentoAprovado_paraInscricaoEXPIRADA_naoEmiteIngresso_eAck (R6, CR-S4-01)")
+    void pagamentoAprovado_paraInscricaoExpirada_naoEmiteIngresso() {
+        // Inscricao ja expirada pelo TTL antes da confirmacao chegar (corrida R6)
+        Inscricao inscricao = Inscricao.pendentePagamento(13L, 103L);
+        inscricao.expirar();
+        Inscricao salva = inscricaoRepository.saveAndFlush(inscricao);
+        Long inscricaoId = salva.getId();
+
+        UUID eventId = UUID.randomUUID();
+        PagamentoAprovadoEvent evento = new PagamentoAprovadoEvent(
+                eventId, 4L, inscricaoId, 13L, 103L, OffsetDateTime.now());
+
+        rabbitTemplate.convertAndSend(EXCHANGE, ROUTING_KEY, evento);
+
+        // O consumidor deve ACK (no-op): processed_events gravado, 0 ingressos, inscricao segue EXPIRADA.
+        // Sem o guard, a tx faria rollback em loop e a mensagem nunca seria consumida (DLQ).
+        await().during(2, TimeUnit.SECONDS).atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
+            assertThat(ingressoRepository.count())
+                    .as("Inscricao EXPIRADA nao deve gerar ingresso")
+                    .isZero();
+            assertThat(processedEventRepository.existsById(eventId))
+                    .as("Mensagem deve ter sido processada (ACK), nao re-entregue em loop")
+                    .isTrue();
+            assertThat(inscricaoRepository.findById(inscricaoId).orElseThrow().getStatus())
+                    .isEqualTo(StatusInscricao.EXPIRADA);
+        });
+    }
+
+    @Test
     @DisplayName("A3.c — pagamentoAprovado_paraInscricaoInexistente_vaParaDLQ_naoQuebra")
     void pagamentoAprovado_paraInscricaoInexistente_vaParaDLQ_naoQuebra() {
         // Inscricao 99999 nao existe no banco

@@ -176,6 +176,30 @@ class TicketControllerIntegrationTest {
                 .andExpect(jsonPath("$.length()").value(2));
     }
 
+    /**
+     * Regressao CR-S4-04 (P1): inscricao PENDENTE_PAGAMENTO (sem ingresso) DEVE aparecer em
+     * GET /tickets/me para a tela "Meus ingressos" exibir "aguardando confirmacao" (US-041 crit.5).
+     * Antes do LEFT JOIN, o INNER JOIN excluia inscricoes sem ingresso e o card nunca renderizava.
+     */
+    @Test
+    void meusIngressos_incluiPendentePagamentoSemIngresso() throws Exception {
+        // ATIVA com ingresso
+        Inscricao ativa = inscricaoRepository.save(Inscricao.criar(USUARIO_ID, EVENTO_ID));
+        ingressoRepository.save(Ingresso.emitir(ativa.getId()));
+        // PENDENTE_PAGAMENTO sem ingresso (ramo PAGO antes de pagamento.aprovado)
+        inscricaoRepository.save(Inscricao.pendentePagamento(USUARIO_ID, 43L));
+
+        mvc.perform(get("/tickets/me")
+                        .header("X-User-Id", USUARIO_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                // ha exatamente um item PENDENTE_PAGAMENTO com codigoUnico vazio (sem QR)
+                .andExpect(jsonPath("$[?(@.statusInscricao == 'PENDENTE_PAGAMENTO')].codigoUnico")
+                        .value(org.hamcrest.Matchers.hasItem("")))
+                .andExpect(jsonPath("$[?(@.statusInscricao == 'ATIVA')].codigoUnico")
+                        .exists());
+    }
+
     @Test
     void meusIngressos_naoVazaDeOutroUsuario() throws Exception {
         Long outroUsuario = 99L;

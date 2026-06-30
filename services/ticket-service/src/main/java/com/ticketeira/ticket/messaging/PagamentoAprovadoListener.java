@@ -4,6 +4,7 @@ import com.ticketeira.common.exception.NotFoundException;
 import com.ticketeira.ticket.domain.Ingresso;
 import com.ticketeira.ticket.domain.Inscricao;
 import com.ticketeira.ticket.domain.ProcessedEvent;
+import com.ticketeira.ticket.domain.StatusInscricao;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import com.ticketeira.ticket.repository.ProcessedEventRepository;
@@ -60,6 +61,19 @@ public class PagamentoAprovadoListener {
         // Emitir ingresso e ativar inscricao na mesma tx
         Inscricao inscricao = inscricaoRepository.findById(evento.inscricaoId())
                 .orElseThrow(() -> new NotFoundException("INSCRICAO_NAO_ENCONTRADA"));
+
+        // Guard de estado (Risco R6): se a inscricao nao esta mais PENDENTE_PAGAMENTO
+        // (ex.: o ExpiracaoReservaJob ja a expirou entre a confirmacao e esta entrega, ou ela
+        // ja foi ativada por uma entrega anterior com outro eventId), NAO emitir ingresso.
+        // A confirmacao tardia de uma EXPIRADA e um no-op aceitavel (ADR-T10/R6): ACK + commit
+        // do processed_events. Sem este guard, inscricao.ativar() lancaria, a tx faria rollback,
+        // o processed_events seria desfeito e a mensagem entraria em loop de re-entrega -> DLQ.
+        if (inscricao.getStatus() != StatusInscricao.PENDENTE_PAGAMENTO) {
+            log.warn("pagamento.aprovado para inscricao em estado {} (esperado PENDENTE_PAGAMENTO): "
+                    + "inscricaoId={} — sem emissao de ingresso (no-op idempotente, ACK).",
+                    inscricao.getStatus(), inscricao.getId());
+            return;
+        }
 
         inscricao.ativar();
         inscricaoRepository.save(inscricao);
