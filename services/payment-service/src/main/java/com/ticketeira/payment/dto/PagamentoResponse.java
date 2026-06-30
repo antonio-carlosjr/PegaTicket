@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
  * Os valores monetarios sao serializados como STRING com 2 casas ("100.00"),
  * evitando que o JSON number perca o zero a direita (100.0) e mantendo a precisao
  * de dinheiro na API.
+ * eventoId/promotorId: additive (TECH-S4-01 / RA2) — null em pagamentos legados.
  */
 public record PagamentoResponse(
         Long id,
@@ -23,7 +24,9 @@ public record PagamentoResponse(
         String gateway,
         String gatewayPaymentId,
         OffsetDateTime processadoEm,
-        OffsetDateTime criadoEm
+        OffsetDateTime criadoEm,
+        Long eventoId,
+        Long promotorId
 ) {
     public static PagamentoResponse from(Pagamento p) {
         return new PagamentoResponse(
@@ -37,7 +40,9 @@ public record PagamentoResponse(
                 p.getGateway(),
                 p.getGatewayPaymentId(),
                 p.getProcessadoEm(),
-                p.getCriadoEm()
+                p.getCriadoEm(),
+                p.getEventoId(),
+                p.getPromotorId()
         );
     }
 }

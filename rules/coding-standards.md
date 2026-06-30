@@ -76,6 +76,11 @@ A escolha vai no `backend-log.md`.
 ### Testes (back)
 - JUnit 5 + AssertJ + Spring Boot Test. Integração com **H2** (`application-test.yml`, RabbitMQ excluído). TDD: teste vermelho → mínimo verde → refator.
 - Cobertura ≥ 80% nos services críticos. **Teste de concorrência obrigatório** para mutação com risco (ex.: 2 inscrições simultâneas → 1 sucesso, 1 falha). Fixtures realistas.
+- **Integração com Postgres/RabbitMQ reais via Testcontainers** (`@Testcontainers(disabledWithoutDocker=true)` — pula no Windows local, roda no CI). Regras que bateram 2× (S4 payment, 5A ticket):
+  - **`TestcontainersBase` = SINGLETON** quando ≥1 classe a estende: containers `static` iniciados **manualmente** num bloco `static` guardado por `DockerClientFactory.instance().isDockerAvailable()`, **sem `@Container`**. Com `@Container static` numa base compartilhada por **2+ classes**, o extension PARA o container ao fim da 1ª classe → a 2ª não conecta/consome (HikariPool `total=0` ou listener em 30s timeout). *(S4 CR pós-merge; 5A CR-5A pós-CI)*
+  - **`@BeforeEach` purga as filas** (`rabbitAdmin.purgeQueue(...)`) — contexto/broker são compartilhados (cacheados); mensagens de um teste vazam para o outro. *(S4 confirmar_2x)*
+  - **Perfil de teste com broker NÃO exclui `RabbitAutoConfiguration`** (o listener/template precisam do broker real); os Postgres-only excluem via `@DynamicPropertySource` e mockam o publisher.
+  - **`RabbitConfig` delega o `RabbitTemplate` ao autoconfigure** (sem bean próprio, sem `@ConditionalOnBean(ConnectionFactory.class)` em config de usuário — é avaliado antes do autoconfig e pula os beans). Declarar só o `MessageConverter` (com `JavaTimeModule`) + filas/exchanges/bindings.
 
 ---
 

@@ -79,6 +79,19 @@ public class Inscricao {
         this.status = StatusInscricao.EXPIRADA;
     }
 
+    /**
+     * Cancela a inscricao em decorrencia de cancelamento do evento (US-042).
+     * Idempotente: no-op (false) se ja CANCELADA ou EXPIRADA — nunca lanca,
+     * para nao virar poison message no consumidor AMQP (CR-S4-01).
+     */
+    public boolean cancelarPorEvento() {
+        if (status == StatusInscricao.ATIVA || status == StatusInscricao.PENDENTE_PAGAMENTO) {
+            this.status = StatusInscricao.CANCELADA;
+            return true;
+        }
+        return false;
+    }
+
     public Long getId() { return id; }
     public Long getUsuarioId() { return usuarioId; }
     public Long getEventoId() { return eventoId; }

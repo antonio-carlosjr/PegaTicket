@@ -87,11 +87,13 @@ public class PagamentoService {
         Pagamento pagamento = Pagamento.pendente(
                 evento.inscricaoId(),
                 evento.usuarioId(),
+                evento.eventoId(),
+                evento.promotorId(),
                 evento.valor(),
                 taxaPercentual
         );
         pagamentoRepository.save(pagamento);
-        log.info("Pagamento PENDENTE criado: inscricaoId={}", evento.inscricaoId());
+        log.info("Pagamento PENDENTE criado: inscricaoId={}, eventoId={}", evento.inscricaoId(), evento.eventoId());
     }
 
     /**
@@ -139,12 +141,11 @@ public class PagamentoService {
 
             if (transicionou) {
                 // Publicacao afterCommit: so se houve transicao PENDENTE -> CONFIRMADO
-                Long eventoId = null; // eventoId nao e armazenado no Pagamento neste sprint
                 publisher.publicarAposCommit(
                         salvo.getId(),
                         salvo.getInscricaoId(),
                         salvo.getUsuarioId(),
-                        eventoId
+                        salvo.getEventoId()
                 );
             }
 

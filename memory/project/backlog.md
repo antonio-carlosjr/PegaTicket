@@ -39,8 +39,8 @@
 |---|---|---|
 | US-040 | Como participante, quero pagar um evento pago (gateway simulado) com retenção em escrow | DONE |
 | US-041 | Como sistema, quero emitir o ingresso só após `pagamento.aprovado` (saga de inscrição paga) | DONE |
-| US-042 | Como participante, quero ser reembolsado se o evento for cancelado | SPRINT-5 |
-| US-043 | Como promotor, quero receber o repasse (menos taxa de 10%) após o evento finalizado | SPRINT-5 |
+| US-042 | Como participante, quero ser reembolsado se o evento for cancelado | DONE |
+| US-043 | Como promotor, quero receber o repasse (menos taxa de 10%) após o evento finalizado | DONE |
 
 ## Épico D — Identidade (user-service) · dívidas conhecidas
 | ID | História | Estado |

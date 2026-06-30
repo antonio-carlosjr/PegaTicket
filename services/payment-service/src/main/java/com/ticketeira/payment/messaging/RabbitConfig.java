@@ -14,12 +14,9 @@ import org.springframework.context.annotation.Configuration;
  * O RabbitTemplate e o ConnectionFactory sao AUTO-CONFIGURADOS pelo Spring Boot
  * (RabbitAutoConfiguration). O MessageConverter abaixo e aplicado automaticamente
  * tanto ao RabbitTemplate quanto a fabrica de listeners. NAO declaramos um
- * RabbitTemplate proprio nem condicionamos os beans ao ConnectionFactory: a versao
- * anterior usava @ConditionalOnBean(ConnectionFactory.class) em config de usuario,
- * que e avaliado ANTES do autoconfigure registrar o ConnectionFactory — pulando os
- * beans ate quando o broker existe. Sem broker (perfil test H2 / Postgres-only sem
- * RabbitAutoConfiguration), estes beans ficam inertes (nenhum RabbitAdmin os declara)
- * e nao exigem ConnectionFactory.
+ * RabbitTemplate proprio nem condicionamos os beans ao ConnectionFactory: sem broker
+ * (perfil test H2 / Postgres-only sem RabbitAutoConfiguration), estes beans ficam
+ * inertes (nenhum RabbitAdmin os declara) e nao exigem ConnectionFactory.
  */
 @Configuration
 public class RabbitConfig {
@@ -28,13 +25,15 @@ public class RabbitConfig {
     public static final String EXCHANGE_EVENTS = "ticketeira.events";
     public static final String EXCHANGE_DLX = "ticketeira.dlx";
 
-    public static final String QUEUE_PEDIDO_CRIADO = "pedido.criado";
+    public static final String QUEUE_PEDIDO_CRIADO      = "pedido.criado";
     public static final String QUEUE_PAGAMENTO_APROVADO = "pagamento.aprovado";
-    public static final String QUEUE_EVENTO_FINALIZADO = "evento.finalizado";
+    public static final String QUEUE_EVENTO_FINALIZADO  = "evento.finalizado";
+    public static final String QUEUE_EVENTO_CANCELADO   = "evento.cancelado";
 
-    public static final String QUEUE_PEDIDO_CRIADO_DLQ = "pedido.criado.dlq";
+    public static final String QUEUE_PEDIDO_CRIADO_DLQ      = "pedido.criado.dlq";
     public static final String QUEUE_PAGAMENTO_APROVADO_DLQ = "pagamento.aprovado.dlq";
-    public static final String QUEUE_EVENTO_FINALIZADO_DLQ = "evento.finalizado.dlq";
+    public static final String QUEUE_EVENTO_FINALIZADO_DLQ  = "evento.finalizado.dlq";
+    public static final String QUEUE_EVENTO_CANCELADO_DLQ   = "evento.cancelado.dlq";
 
     @Bean
     public MessageConverter jsonMessageConverter() {
@@ -79,6 +78,14 @@ public class RabbitConfig {
                 .build();
     }
 
+    @Bean
+    public Queue queueEventoCancelado() {
+        return QueueBuilder.durable(QUEUE_EVENTO_CANCELADO)
+                .withArgument("x-dead-letter-exchange", EXCHANGE_DLX)
+                .withArgument("x-dead-letter-routing-key", QUEUE_EVENTO_CANCELADO)
+                .build();
+    }
+
     // --- Filas DLQ ---
 
     @Bean
@@ -94,6 +101,11 @@ public class RabbitConfig {
     @Bean
     public Queue queueEventoFinalizadoDlq() {
         return QueueBuilder.durable(QUEUE_EVENTO_FINALIZADO_DLQ).build();
+    }
+
+    @Bean
+    public Queue queueEventoCanceladoDlq() {
+        return QueueBuilder.durable(QUEUE_EVENTO_CANCELADO_DLQ).build();
     }
 
     // --- Bindings: exchange principal -> filas ---
@@ -113,6 +125,11 @@ public class RabbitConfig {
         return BindingBuilder.bind(queueEventoFinalizado()).to(exchangeEvents()).with(QUEUE_EVENTO_FINALIZADO);
     }
 
+    @Bean
+    public Binding bindingEventoCancelado() {
+        return BindingBuilder.bind(queueEventoCancelado()).to(exchangeEvents()).with(QUEUE_EVENTO_CANCELADO);
+    }
+
     // --- Bindings: DLX -> DLQ ---
 
     @Bean
@@ -128,5 +145,10 @@ public class RabbitConfig {
     @Bean
     public Binding bindingEventoFinalizadoDlq() {
         return BindingBuilder.bind(queueEventoFinalizadoDlq()).to(exchangeDlx()).with(QUEUE_EVENTO_FINALIZADO);
+    }
+
+    @Bean
+    public Binding bindingEventoCanceladoDlq() {
+        return BindingBuilder.bind(queueEventoCanceladoDlq()).to(exchangeDlx()).with(QUEUE_EVENTO_CANCELADO);
     }
 }

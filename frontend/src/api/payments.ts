@@ -14,11 +14,13 @@ export interface PagamentoResponse {
   valorBruto: string         // NUMERIC(12,2) como string
   valorTaxa: string          // round(bruto * 0.10, 2)
   valorRepasse: string       // bruto - taxa (computado, nao liberado)
-  status: string             // "PENDENTE" | "CONFIRMADO"
+  status: string             // "PENDENTE" | "CONFIRMADO" | "REPASSADO" | "REEMBOLSADO"
   gateway: string            // "SIMULADO"
   gatewayPaymentId: string | null   // preenchido apos confirmacao
   processadoEm: string | null       // OffsetDateTime ISO-8601
   criadoEm: string                  // OffsetDateTime ISO-8601
+  eventoId?: number | null           // TECH-S4-01 — null em pagamentos legados
+  promotorId?: number | null         // TECH-S4-01 — null em pagamentos legados
 }
 
 // ─── Funcoes de API ──────────────────────────────────────────────────────────

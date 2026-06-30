@@ -106,7 +106,18 @@ public class EventController {
             @RequestHeader(value = "X-User-Papel", required = false) String papel) {
         requireUserId(userId);
         requirePromotor(papel);
-        return ResponseEntity.ok(EventoResponse.from(eventService.cancelar(userId, id)));
+        return ResponseEntity.ok(EventoResponse.from(eventService.cancelar(id, userId)));
+    }
+
+    /** POST /events/{id}/encerrar — PUBLICADO → REALIZADO (PROMOTOR + owner); dispara repasse. */
+    @PostMapping("/{id}/encerrar")
+    public ResponseEntity<EventoResponse> encerrar(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Id", required = false) Long userId,
+            @RequestHeader(value = "X-User-Papel", required = false) String papel) {
+        requireUserId(userId);
+        requirePromotor(papel);
+        return ResponseEntity.ok(EventoResponse.from(eventService.encerrar(id, userId)));
     }
 
     /** GET /events — lista eventos PUBLICADOS com filtros opcionais (qualquer autenticado) */

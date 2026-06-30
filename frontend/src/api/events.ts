@@ -124,6 +124,12 @@ export async function cancelarEvento(id: number): Promise<EventoResponse> {
   return data
 }
 
+/** POST /api/events/:id/encerrar — encerra evento PUBLICADO → REALIZADO (PROMOTOR owner). */
+export async function encerrarEvento(id: number): Promise<EventoResponse> {
+  const { data } = await api.post<EventoResponse>(`/api/events/${id}/encerrar`)
+  return data
+}
+
 /** GET /api/events — lista eventos PUBLICADOS (qualquer autenticado). */
 export async function listarEventos(
   params?: ListarEventosParams

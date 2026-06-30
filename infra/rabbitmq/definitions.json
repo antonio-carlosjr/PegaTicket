@@ -90,6 +90,40 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "evento.cancelado",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "evento.cancelado"
+      }
+    },
+    {
+      "name": "evento.cancelado.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "evento.cancelado.ticket",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "evento.cancelado.ticket"
+      }
+    },
+    {
+      "name": "evento.cancelado.ticket.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
     }
   ],
   "bindings": [
@@ -139,6 +173,38 @@
       "destination": "evento.finalizado.dlq",
       "destination_type": "queue",
       "routing_key": "evento.finalizado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "evento.cancelado",
+      "destination_type": "queue",
+      "routing_key": "evento.cancelado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "evento.cancelado.ticket",
+      "destination_type": "queue",
+      "routing_key": "evento.cancelado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "evento.cancelado.dlq",
+      "destination_type": "queue",
+      "routing_key": "evento.cancelado",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "evento.cancelado.ticket.dlq",
+      "destination_type": "queue",
+      "routing_key": "evento.cancelado.ticket",
       "arguments": {}
     }
   ],

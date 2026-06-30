@@ -5,6 +5,7 @@ import {
   meusEventos,
   publicarEvento,
   cancelarEvento,
+  encerrarEvento,
   type EventoResumo,
   type StatusEvento,
 } from '@/api/events'
@@ -101,6 +102,40 @@ export function MeusEventos() {
     }
   }
 
+  async function handleEncerrar(id: number) {
+    setEmAcao(id)
+    try {
+      const resposta = await encerrarEvento(id)
+      toast.success('Evento marcado como concluido. O pagamento aos participantes sera processado em instantes.')
+      // Atualiza o status do evento diretamente na lista usando a resposta do backend
+      setEventos((prev) =>
+        prev.map((ev) =>
+          ev.id === id ? { ...ev, status: resposta.status } : ev
+        )
+      )
+    } catch (e) {
+      const code = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      const isConflito = (e as { response?: { status?: number } })?.response?.status === 409
+      if (isConflito) {
+        if (code === 'TRANSICAO_INVALIDA' || code === 'EVENTO_JA_REALIZADO') {
+          toast.error('Nao e possivel encerrar', {
+            description: 'O status atual do evento nao permite encerramento.',
+          })
+        } else {
+          toast.error('Nao e possivel encerrar', {
+            description: extractApiError(e, 'Status nao permite esta transicao.'),
+          })
+        }
+      } else {
+        toast.error('Erro ao encerrar evento', {
+          description: extractApiError(e, 'Nao foi possivel encerrar o evento.'),
+        })
+      }
+    } finally {
+      setEmAcao(null)
+    }
+  }
+
   async function handleCancelar(id: number, titulo: string) {
     const confirmado = window.confirm(
       `Tem certeza que deseja cancelar o evento "${titulo}"? Esta acao nao pode ser desfeita.`
@@ -188,6 +223,7 @@ export function MeusEventos() {
               evento={ev}
               emAcao={emAcao === ev.id}
               onPublicar={handlePublicar}
+              onEncerrar={handleEncerrar}
               onCancelar={handleCancelar}
             />
           ))}
@@ -203,14 +239,17 @@ function EventoCard({
   evento,
   emAcao,
   onPublicar,
+  onEncerrar,
   onCancelar,
 }: {
   evento: EventoResumo
   emAcao: boolean
   onPublicar: (id: number) => Promise<void>
+  onEncerrar: (id: number) => Promise<void>
   onCancelar: (id: number, titulo: string) => Promise<void>
 }) {
   const podePublicar = evento.status === 'RASCUNHO'
+  const podeEncerrar = evento.status === 'PUBLICADO'
   const podeCancelar =
     evento.status === 'RASCUNHO' || evento.status === 'PUBLICADO'
 
@@ -298,6 +337,17 @@ function EventoCard({
               onClick={() => onPublicar(evento.id)}
             >
               Publicar
+            </Button>
+          )}
+          {podeEncerrar && (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              loading={emAcao}
+              onClick={() => onEncerrar(evento.id)}
+            >
+              Encerrar
             </Button>
           )}
           {podeCancelar && (

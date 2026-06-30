@@ -69,6 +69,12 @@ public class Evento {
     @Column(name = "imagem_url", length = 300)
     private String imagemUrl;
 
+    @Column(name = "realizado_em")
+    private OffsetDateTime realizadoEm;
+
+    @Column(name = "cancelado_em")
+    private OffsetDateTime canceladoEm;
+
     protected Evento() {
     }
 
@@ -109,6 +115,19 @@ public class Evento {
         this.atualizadoEm = OffsetDateTime.now();
     }
 
+    /** Maquina de estados: PUBLICADO → REALIZADO (gatilho do repasse). */
+    public void realizar() {
+        if (status == StatusEvento.REALIZADO) {
+            throw new BusinessException("EVENTO_JA_REALIZADO", 409);
+        }
+        if (status != StatusEvento.PUBLICADO) {
+            throw new BusinessException("TRANSICAO_INVALIDA", 409);
+        }
+        this.status = StatusEvento.REALIZADO;
+        this.realizadoEm = OffsetDateTime.now();
+        this.atualizadoEm = OffsetDateTime.now();
+    }
+
     /** Maquina de estados: RASCUNHO|PUBLICADO → CANCELADO. */
     public void cancelar() {
         if (status == StatusEvento.CANCELADO) {
@@ -118,6 +137,8 @@ public class Evento {
             throw new BusinessException("TRANSICAO_INVALIDA", 409);
         }
         this.status = StatusEvento.CANCELADO;
+        this.canceladoEm = OffsetDateTime.now();
+        this.vagasDisponiveis = this.capacidade;
         this.atualizadoEm = OffsetDateTime.now();
     }
 
@@ -163,4 +184,6 @@ public class Evento {
     public OffsetDateTime getAtualizadoEm() { return atualizadoEm; }
     public Integer getVagasDisponiveis() { return vagasDisponiveis; }
     public String getImagemUrl() { return imagemUrl; }
+    public OffsetDateTime getRealizadoEm() { return realizadoEm; }
+    public OffsetDateTime getCanceladoEm() { return canceladoEm; }
 }
