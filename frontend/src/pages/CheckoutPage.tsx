@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { CreditCard, Clock, CheckCircle2, AlertCircle, QrCode } from 'lucide-react'
+import { CreditCard, Clock, CheckCircle2, AlertCircle } from 'lucide-react'
 import { getPagamentoDaInscricao, confirmarPagamento, type PagamentoResponse } from '@/api/payments'
 import { meusIngressos, type MeuIngressoResponse } from '@/api/tickets'
 import { extractApiError } from '@/api/auth'
