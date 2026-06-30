@@ -61,9 +61,11 @@ public class Pagamento {
         Pagamento p = new Pagamento();
         p.inscricaoId = inscricaoId;
         p.usuarioId = usuarioId;
-        p.valorBruto = valorBruto;
-        p.valorTaxa = valorBruto.multiply(taxaPercentual).setScale(2, RoundingMode.HALF_UP);
-        p.valorRepasse = valorBruto.subtract(p.valorTaxa);
+        // Normaliza para 2 casas (dinheiro): o valor pode chegar com escala 0/1
+        // (ex.: preco 100.0) e a coluna e NUMERIC(12,2). Sem isto o JSON sai "100.0".
+        p.valorBruto = valorBruto.setScale(2, RoundingMode.HALF_UP);
+        p.valorTaxa = p.valorBruto.multiply(taxaPercentual).setScale(2, RoundingMode.HALF_UP);
+        p.valorRepasse = p.valorBruto.subtract(p.valorTaxa);
         p.status = StatusPagamento.PENDENTE;
         p.gateway = "SIMULADO";
         p.criadoEm = OffsetDateTime.now();

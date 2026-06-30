@@ -2,32 +2,44 @@ package com.ticketeira.payment;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Base abstrata para testes de integracao do payment-service.
- * Declara Postgres + RabbitMQ como containers static (reuso entre classes — evita subir broker por classe).
- * @DynamicPropertySource injeta as propriedades de conexao em todos os testes filhos.
  *
- * Nota: NAO exclui RabbitAutoConfiguration — esses testes precisam do broker real.
- * Padrao: @Testcontainers(disabledWithoutDocker=true) nas subclasses.
+ * Padrao SINGLETON: Postgres + RabbitMQ sao iniciados UMA vez (start manual no bloco
+ * static) e reusados por TODAS as classes filhas. NAO usamos @Container aqui de
+ * proposito: com @Container static numa base compartilhada por varias classes, o
+ * extension do Testcontainers PARA os containers ao fim da primeira classe, deixando a
+ * 2a/3a classe sem conexao (HikariPool total=0, timeout). Com start manual sem @Container,
+ * os containers ficam vivos pelo JVM inteiro e sao reusados.
+ *
+ * @Testcontainers(disabledWithoutDocker=true) (herdado pelas subclasses via extension)
+ * pula os testes quando o Docker nao esta disponivel; o start so ocorre se houver Docker.
  */
 @Testcontainers(disabledWithoutDocker = true)
 public abstract class TestcontainersBase {
 
-    @Container
     protected static final PostgreSQLContainer<?> POSTGRES =
             new PostgreSQLContainer<>("postgres:16-alpine")
                     .withDatabaseName("payment_test")
                     .withUsername("test")
                     .withPassword("test");
 
-    @Container
     protected static final RabbitMQContainer RABBITMQ =
             new RabbitMQContainer("rabbitmq:3.13-management");
+
+    static {
+        // So inicia se o Docker existir (local sem Docker: os testes sao pulados pelo
+        // @Testcontainers disabledWithoutDocker, e nada e iniciado aqui).
+        if (DockerClientFactory.instance().isDockerAvailable()) {
+            POSTGRES.start();
+            RABBITMQ.start();
+        }
+    }
 
     @DynamicPropertySource
     static void overrideProps(DynamicPropertyRegistry registry) {
