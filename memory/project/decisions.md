@@ -33,6 +33,12 @@
 ## ADR-P09 — Escopo do Sprint 3 (Inscrição gratuita + ingresso QR)
 **Status:** Aceita. Épico B US-030/031/032/033: caminho-feliz **sem dinheiro**, com controle de concorrência (capacidade + dupla inscrição) e ingresso com QR. Caminho pago, check-in e cancelamento ficam para Sprints 4/5. Ref: `memory/sprint-3/00-sprint-spec.md`.
 
+## ADR-P10 — Escopo do Sprint 4 (Pagamento + escrow + saga de inscrição paga)
+**Status:** Aceita (gate de planejamento, 2026-06-30, escolha do dono). Épico C US-040 (pagar evento PAGO via gateway **simulado** com retenção em **escrow**) + US-041 (emitir ingresso **só após** `pagamento.aprovado` — saga assíncrona) + Épico E US-060 (consumidores RabbitMQ idempotentes via `processed_events`, fechando a dívida ADR-T04). **Reembolso (US-042) e repasse −10% (US-043) ficam para a Sprint 5** — o escrow aqui apenas retém (`pagamentos.status=CONFIRMADO`), não estorna nem libera. Justificativa: é o feature financeiro central (RF05) e o primeiro a exercitar de fato a arquitetura orientada a eventos (RabbitMQ estava só declarado). Observação: o roadmap §8 do `architectural-plan.md` foi **re-sequenciado** pelos ADRs P08/P09 — "Sprint 4 = carga/observabilidade" deixou de ser o próximo passo; US-061/RNF09 seguem no backlog. Ref: `memory/sprint-4/00-sprint-spec.md`.
+
+## ADR-P11 — Escopo do Sprint 5 ("sprint de fechamento": saga restante + ciclo de vida + qualidade)
+**Status:** Proposta (aguarda gate do dono — planejamento 2026-06-30). Pedido do dono: "toda a saga restante". Escopo em 3 trilhas: **5A financeiro** (US-043 repasse −10% pós-evento REALIZADO + US-042 reembolso por cancelamento, ligando as filas `evento.finalizado` e a nova `evento.cancelado`); **5B experiência** (US-034 check-in QR + US-035 cancelamento c/ política + US-024 avaliar + US-025 reputação); **5C qualidade** (US-061 testes de carga + propostos US-062 observabilidade e US-063 hardening de dívidas ADR-T03/T05 + TECH-S3). **US-060 NÃO entra — já é do Sprint 4** (ADR-P10); o S5 reusa o padrão `processed_events`/`afterCommit`. **Aviso:** escopo ≈2× um sprint normal (7 histórias confirmadas em 4 serviços); recomendado **fasear 5A→5B→5C** ou aprovar como mega-sprint único — decisão do dono no gate. US-062/US-063 são adições do orquestrador ("pode adicionar o que faltar"), pendentes de confirmação. Depende do Sprint 4 mergeado. Ref: `memory/sprint-5/00-sprint-spec.md`.
+
 ---
 
 ## Dívidas técnicas conhecidas (viram histórias/ADR quando endereçadas)
