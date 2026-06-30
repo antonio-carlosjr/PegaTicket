@@ -42,6 +42,7 @@ Resources: `db/migration/V__*.sql` (Flyway), `application.yml` + `application-{d
 - **Erros tipados:** lançar `BusinessException(msg, status)` / `NotFoundException` / `UnauthorizedException` (de `common-lib`). `GlobalExceptionHandler` traduz para `ErrorResponse` (timestamp, status, error, message, path). **Nunca** `catch (Exception e) {}` silencioso.
 - **Param malformado → 400, nunca 500:** o `GlobalExceptionHandler` trata `MethodArgumentTypeMismatchException` (enum/número/data inválida em `@RequestParam`/`@PathVariable`). *(aprendizado Sprint 1+2: erro de input do cliente não pode virar 500)*
 - **Rota inexistente → 404, nunca 500:** o `GlobalExceptionHandler` trata `NoResourceFoundException` (Spring 6.1 cai no resource handler ao não casar rota). Sem isso o catch-all `Exception` a transforma em 500. *(aprendizado Sprint 3, CR-S3-03 — generaliza a regra acima: nenhum caminho de cliente vira 500)*
+- **Handlers de borda centralizados:** os handlers de input (400/404, `MethodArgumentTypeMismatch`, `HttpMessageNotReadable`) reincidem por serviço (CR-S3-03 → CR-S4-03 repetiu o 500 em query inválida). Extrair um `@RestControllerAdvice` **base no `common-lib`** que cada serviço estende, para não recriar (e esquecer). *(follow-up Sprint 4, CR-S4-03)*
 - **Auth:** o serviço NÃO valida JWT (o gateway faz). Endpoints autenticados leem `@RequestHeader("X-User-Id") Long userId` (401 se ausente). `SecurityConfig` = csrf/cors off, STATELESS, `permitAll`.
 - **Chamada cross-service usa só o canal interno** (`/internal/**` + `X-Internal-Token`), **nunca** endpoint público user-scoped (que exige `X-User-*` — indisponível service-to-service). O endpoint interno **não** lê `X-User-*`; valida o token na borda. O gateway não roteia `/api/internal/**`. *(aprendizado Sprint 3, BUG-S3-02 + ADR-T08)*
 - **Segredo compartilhado: comparação constante-no-tempo** (`MessageDigest.isEqual(a.getBytes(UTF_8), b.getBytes(UTF_8))`, null-safe), **nunca** `String.equals` (curto-circuita → timing attack). *(aprendizado Sprint 3, CR-S3-05)*
@@ -64,10 +65,12 @@ Resources: `db/migration/V__*.sql` (Flyway), `application.yml` + `application-{d
 A escolha vai no `backend-log.md`.
 
 - **Hot path não relê o banco se o corpo não é consumido:** quando o cliente descarta a resposta (`toBodilessEntity`), não pague um `SELECT`/`findById` extra na linha mais contendida — use `UPDATE ... RETURNING` ou devolva sem reconsultar. *(aprendizado Sprint 3, CR-S3-02/03)*
+- **Job/método com I/O remoto não segura transação:** um `@Scheduled`/serviço que faz chamada de rede (HTTP/AMQP) faz a mutação local em **tx curta** e o I/O **fora** dela — não segure conexão/lock de banco durante I/O de rede. Cuidado com **auto-invocação de proxy AOP**: chamar um método `@Transactional` de outro método **da mesma classe** não abre transação (extraia para outro bean ou use `TransactionTemplate`). *(aprendizado Sprint 4, CR-S4-02)*
 
 ### Mensageria (RabbitMQ)
 - Produtor publica **após o commit** (`TransactionSynchronization.afterCommit`), nunca dentro da transação.
 - Consumidor (`@RabbitListener`) é **idempotente**: checar/gravar `processed_events(event_id)` (at-least-once). Falha → DLQ.
+- **Idempotência cobre o evento "tarde demais":** se o evento chega para um agregado em estado já avançado/inválido (ex.: `pagamento.aprovado` para inscrição `EXPIRADA`), o consumidor faz **ACK no-op** (o efeito não se aplica mais) — **nunca** deixa a transição de estado lançar, pois o rollback desfaz o `INSERT processed_events` → reentrega infinita → **poison message** parando na DLQ. Trate o estado inesperado explicitamente. *(aprendizado Sprint 4, CR-S4-01, P0)*
 - Payload de evento é um `record` versionável; routing key `entidade.acao` (`pedido.criado`).
 
 ### Testes (back)

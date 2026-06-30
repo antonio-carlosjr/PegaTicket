@@ -1,5 +1,6 @@
 package com.ticketeira.ticket.domain;
 
+import com.ticketeira.common.exception.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -34,6 +35,7 @@ public class Inscricao {
 
     protected Inscricao() {}
 
+    /** Factory para evento GRATUITO (S3) — status inicial ATIVA. */
     public static Inscricao criar(Long usuarioId, Long eventoId) {
         Inscricao i = new Inscricao();
         i.usuarioId = usuarioId;
@@ -41,6 +43,40 @@ public class Inscricao {
         i.status = StatusInscricao.ATIVA;
         i.inscritoEm = OffsetDateTime.now();
         return i;
+    }
+
+    /** Factory para evento PAGO (S4) — vaga reservada, aguardando pagamento.aprovado. */
+    public static Inscricao pendentePagamento(Long usuarioId, Long eventoId) {
+        Inscricao i = new Inscricao();
+        i.usuarioId = usuarioId;
+        i.eventoId = eventoId;
+        i.status = StatusInscricao.PENDENTE_PAGAMENTO;
+        i.inscritoEm = OffsetDateTime.now();
+        return i;
+    }
+
+    /**
+     * Transicao PENDENTE_PAGAMENTO -> ATIVA.
+     * Chamada pelo consumidor de pagamento.aprovado (saga).
+     * Lanca em transicao invalida para proteger o invariante de dominio.
+     */
+    public void ativar() {
+        if (status != StatusInscricao.PENDENTE_PAGAMENTO) {
+            throw new BusinessException("TRANSICAO_INVALIDA_ATIVAR:" + status, 409);
+        }
+        this.status = StatusInscricao.ATIVA;
+    }
+
+    /**
+     * Transicao PENDENTE_PAGAMENTO -> EXPIRADA.
+     * Chamada pelo ExpiracaoReservaJob (TTL, ADR-T10).
+     * Lanca em transicao invalida para evitar expirar inscricao ja ativa.
+     */
+    public void expirar() {
+        if (status != StatusInscricao.PENDENTE_PAGAMENTO) {
+            throw new BusinessException("TRANSICAO_INVALIDA_EXPIRAR:" + status, 409);
+        }
+        this.status = StatusInscricao.EXPIRADA;
     }
 
     public Long getId() { return id; }

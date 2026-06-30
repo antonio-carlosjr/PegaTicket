@@ -1,7 +1,7 @@
-spring:
-  autoconfigure:
-    exclude: org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
-
+# NAO excluir RabbitAutoConfiguration aqui: os testes de integracao com broker real
+# (que estendem TestcontainersBase) precisam do RabbitTemplate/ConnectionFactory
+# auto-configurados. Os testes Postgres-only (concorrencia/job) excluem o
+# RabbitAutoConfiguration individualmente via @DynamicPropertySource e mockam o publisher.
 app:
   event-service:
     url: http://localhost:8082

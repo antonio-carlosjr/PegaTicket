@@ -7,6 +7,7 @@ import com.ticketeira.ticket.client.EventResumo;
 import com.ticketeira.ticket.domain.Ingresso;
 import com.ticketeira.ticket.domain.Inscricao;
 import com.ticketeira.ticket.dto.InscricaoResponse;
+import com.ticketeira.ticket.messaging.PedidoCriadoPublisher;
 import com.ticketeira.ticket.repository.IngressoRepository;
 import com.ticketeira.ticket.repository.InscricaoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,6 +51,9 @@ class InscricaoServiceTest {
     @Mock
     EventClient eventClient;
 
+    @Mock
+    PedidoCriadoPublisher pedidoCriadoPublisher;
+
     // Criado manualmente (nao @InjectMocks) para passar PlatformTransactionManager mockado
     InscricaoService inscricaoService;
 
@@ -64,11 +68,13 @@ class InscricaoServiceTest {
         when(txManager.getTransaction(any())).thenReturn(txStatus);
 
         inscricaoService = new InscricaoService(
-                inscricaoRepository, ingressoRepository, eventClient, txManager);
+                inscricaoRepository, ingressoRepository, eventClient,
+                pedidoCriadoPublisher, txManager);
 
         // Defaults: evento GRATUITO PUBLICADO, usuario nao inscrito
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Show Gratuito", "GRATUITO", "PUBLICADO", 10, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Show Gratuito", "GRATUITO", "PUBLICADO", 10, 100,
+                        null, 1L));
         when(inscricaoRepository.existsByUsuarioIdAndEventoId(USUARIO_ID, EVENTO_ID)).thenReturn(false);
     }
 
@@ -108,21 +114,34 @@ class InscricaoServiceTest {
     // ---- B2: Bloqueios de estado/tipo ----
 
     @Test
-    void inscrever_eventoPago_lanca422_semReservar() {
+    void inscrever_eventoPago_criaPendentePagamento_semIngresso() {
+        // Sprint 4: evento PAGO agora e suportado (ramo PAGO da saga)
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Festival", "PAGO", "PUBLICADO", 10, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Festival", "PAGO", "PUBLICADO", 10, 100,
+                        new java.math.BigDecimal("99.00"), 1L));
 
-        assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
-                .isInstanceOf(BusinessException.class)
-                .hasMessage("EVENTO_PAGO_NAO_SUPORTADO");
+        com.ticketeira.ticket.domain.Inscricao inscricaoPaga =
+                com.ticketeira.ticket.domain.Inscricao.pendentePagamento(USUARIO_ID, EVENTO_ID);
+        try {
+            var campo = com.ticketeira.ticket.domain.Inscricao.class.getDeclaredField("id");
+            campo.setAccessible(true);
+            campo.set(inscricaoPaga, 1L);
+        } catch (Exception e) { throw new RuntimeException(e); }
+        when(inscricaoRepository.save(any())).thenReturn(inscricaoPaga);
 
-        verify(eventClient, never()).reservarVaga(any());
+        InscricaoResponse resp = inscricaoService.inscrever(EVENTO_ID, USUARIO_ID);
+
+        assertThat(resp.status()).isEqualTo("PENDENTE_PAGAMENTO");
+        assertThat(resp.ingresso()).isNull();
+        assertThat(resp.pagamento()).isNotNull();
+        verify(ingressoRepository, never()).save(any());
     }
 
     @Test
     void inscrever_eventoNaoPublicado_lanca422_semReservar() {
         when(eventClient.getEvento(EVENTO_ID))
-                .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100));
+                .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100,
+                        null, 1L));
 
         assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
                 .isInstanceOf(BusinessException.class)

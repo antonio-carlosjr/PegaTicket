@@ -115,6 +115,12 @@ export function EventoDetalhe() {
     setInscrevendo(true)
     try {
       const resultado = await inscrever(evento.id)
+      // Evento PAGO: redireciona para checkout (inscricao PENDENTE_PAGAMENTO)
+      if (resultado.status === 'PENDENTE_PAGAMENTO' && resultado.id) {
+        navigate(`/checkout/${resultado.id}`)
+        return
+      }
+      // Evento GRATUITO: exibe ingresso no lugar (comportamento S3 intacto)
       setInscricao(resultado)
       toast.success('Inscrição confirmada!', {
         description: 'Seu ingresso foi gerado com sucesso.',
@@ -264,8 +270,8 @@ export function EventoDetalhe() {
         </Card>
       )}
 
-      {/* Ingresso gerado (após inscrição bem-sucedida) */}
-      {inscricao && (
+      {/* Ingresso gerado (após inscrição bem-sucedida — apenas GRATUITO; PAGO redireciona) */}
+      {inscricao && inscricao.ingresso && (
         <Card className="border-success/40 bg-success/5">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg text-success">
@@ -322,9 +328,29 @@ export function EventoDetalhe() {
             </>
           )}
 
-          {eventoPago && (
-            <p className="text-sm text-muted-foreground">
-              Inscrições pagas disponíveis em breve.
+          {eventoPago && evento.status === 'PUBLICADO' && (evento.vagasDisponiveis === null || evento.vagasDisponiveis > 0) && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Evento pago —{' '}
+                <strong>{formatarPreco(evento.preco)}</strong>.{' '}
+                {evento.vagasDisponiveis !== null
+                  ? `${evento.vagasDisponiveis} vaga${evento.vagasDisponiveis !== 1 ? 's' : ''} disponível${evento.vagasDisponiveis !== 1 ? 'is' : ''}.`
+                  : ''}
+              </p>
+              <Button
+                size="lg"
+                onClick={handleInscrever}
+                disabled={inscrevendo}
+                aria-label="Inscrever-se e pagar neste evento"
+              >
+                <Ticket className="h-4 w-4" />
+                {inscrevendo ? 'Processando...' : 'Inscrever-se e pagar'}
+              </Button>
+            </>
+          )}
+          {eventoPago && evento.status === 'PUBLICADO' && evento.vagasDisponiveis === 0 && (
+            <p className="font-medium text-destructive">
+              Não há mais vagas disponíveis para este evento.
             </p>
           )}
 

@@ -22,12 +22,21 @@ public interface IngressoRepository extends JpaRepository<Ingresso, Long> {
 
     /**
      * Usado internamente para construir MeuIngressoResponse com dados da inscricao.
-     * Retorna pares [Ingresso, Inscricao] para evitar N+1.
+     * Retorna pares [Inscricao, Ingresso] para evitar N+1.
+     *
+     * LEFT JOIN (nao INNER): inscricoes PENDENTE_PAGAMENTO ainda NAO tem ingresso e precisam
+     * aparecer na tela "Meus ingressos" como "aguardando confirmacao de pagamento"
+     * (US-041 criterio 5). Com INNER JOIN essas inscricoes sumiam — o card de pendente nunca
+     * renderizava em producao. Filtra a ATIVA (com ingresso) e PENDENTE_PAGAMENTO (sem ingresso);
+     * CANCELADA/EXPIRADA ficam de fora da listagem de ingressos.
      */
     @Query("""
-            SELECT ing, ins FROM Ingresso ing
-            JOIN Inscricao ins ON ing.inscricaoId = ins.id
+            SELECT ins, ing FROM Inscricao ins
+            LEFT JOIN Ingresso ing ON ing.inscricaoId = ins.id
             WHERE ins.usuarioId = :userId
+              AND ins.status IN (com.ticketeira.ticket.domain.StatusInscricao.ATIVA,
+                                 com.ticketeira.ticket.domain.StatusInscricao.PENDENTE_PAGAMENTO)
+            ORDER BY ins.inscritoEm DESC
             """)
     List<Object[]> findIngressoComInscricaoByUsuarioId(@Param("userId") Long userId);
 }

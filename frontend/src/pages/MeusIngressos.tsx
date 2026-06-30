@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, QrCode, Ticket } from 'lucide-react'
+import { Calendar, Clock, MapPin, QrCode, Ticket } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { meusIngressos, type MeuIngressoResponse } from '@/api/tickets'
 import { detalheEvento, type EventoResponse } from '@/api/events'
@@ -43,6 +43,55 @@ function badgeStatusIngresso(status: string) {
     default:
       return <Badge variant="outline">{status}</Badge>
   }
+}
+
+/** Inscricao PENDENTE_PAGAMENTO: sem ingresso, aguardando saga assincrona. */
+function IngressoPendenteCard({
+  ingresso,
+  evento,
+}: {
+  ingresso: MeuIngressoResponse
+  evento: EventoResponse | null
+}) {
+  return (
+    <Card className="overflow-hidden border-warning/40">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <CardTitle className="text-base leading-snug">
+            {evento ? evento.titulo : `Evento #${ingresso.eventoId}`}
+          </CardTitle>
+          <Badge variant="warning">Pendente</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {evento && (
+          <div className="space-y-1.5 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="h-4 w-4 flex-shrink-0" />
+              <span>{formatarDataHora(evento.dataInicio)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4 flex-shrink-0" />
+              <span className="line-clamp-1">{evento.local}</span>
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-warning/30 bg-warning/5 p-4 text-center">
+          <Clock className="h-8 w-8 text-warning" aria-hidden="true" />
+          <p className="text-sm font-medium">Aguardando confirmacao de pagamento</p>
+          <p className="text-xs text-muted-foreground">
+            Finalize o pagamento para receber seu ingresso.
+          </p>
+          <Link
+            to={`/checkout/${ingresso.inscricaoId}`}
+            className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
+          >
+            Finalizar pagamento
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 // ─── Componente ───────────────────────────────────────────────────────────────
@@ -139,14 +188,26 @@ export function MeusIngressos() {
       {/* Lista de ingressos */}
       {itens.length > 0 && (
         <div className="grid gap-6 sm:grid-cols-2">
-          {itens.map(({ ingresso, evento, erroEvento }) => (
-            <IngressoCard
-              key={ingresso.ingressoId}
-              ingresso={ingresso}
-              evento={evento}
-              erroEvento={erroEvento}
-            />
-          ))}
+          {itens.map(({ ingresso, evento, erroEvento }) => {
+            // Inscricao PENDENTE_PAGAMENTO: exibe card especial sem QR
+            if (ingresso.statusInscricao === 'PENDENTE_PAGAMENTO') {
+              return (
+                <IngressoPendenteCard
+                  key={`pendente-${ingresso.inscricaoId}`}
+                  ingresso={ingresso}
+                  evento={evento}
+                />
+              )
+            }
+            return (
+              <IngressoCard
+                key={ingresso.ingressoId}
+                ingresso={ingresso}
+                evento={evento}
+                erroEvento={erroEvento}
+              />
+            )
+          })}
         </div>
       )}
     </div>
