@@ -4,12 +4,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
 import com.ticketeira.event.dto.EventoUpdateRequest;
+import com.ticketeira.event.messaging.EventoPublisher;
 import com.ticketeira.event.repository.EventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -41,6 +43,9 @@ class EventControllerIntegrationTest {
 
     @Autowired
     EventRepository eventRepository;
+
+    @MockBean
+    EventoPublisher eventoPublisher;
 
     private static final Long PROMOTOR_A = 1L;
     private static final Long PROMOTOR_B = 2L;

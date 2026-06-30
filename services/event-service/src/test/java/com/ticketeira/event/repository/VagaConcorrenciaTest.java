@@ -2,12 +2,14 @@ package com.ticketeira.event.repository;
 
 import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.TipoEvento;
+import com.ticketeira.event.messaging.EventoPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -64,6 +66,9 @@ class VagaConcorrenciaTest {
 
     @Autowired
     EventRepository eventRepository;
+
+    @MockBean
+    EventoPublisher eventoPublisher;
 
     private Evento eventoPublicado(int capacidade) {
         Evento e = Evento.criar(1L, "Teste", null,

@@ -2,12 +2,14 @@ package com.ticketeira.event.controller;
 
 import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.TipoEvento;
+import com.ticketeira.event.messaging.EventoPublisher;
 import com.ticketeira.event.repository.EventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,9 @@ class InternalEventControllerTest {
 
     @Autowired
     EventRepository eventRepository;
+
+    @MockBean
+    EventoPublisher eventoPublisher;
 
     private static final String TOKEN_OK = "test-internal-secret";
     private static final String TOKEN_ERRADO = "token-errado";

@@ -9,6 +9,7 @@ import com.ticketeira.event.dto.EventoCreateRequest;
 import com.ticketeira.event.dto.EventoInternoResponse;
 import com.ticketeira.event.dto.EventoUpdateRequest;
 import com.ticketeira.event.dto.ReservaResponse;
+import com.ticketeira.event.messaging.EventoPublisher;
 import com.ticketeira.event.repository.EventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,9 +22,11 @@ import java.time.OffsetDateTime;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final EventoPublisher eventoPublisher;
 
-    public EventService(EventRepository eventRepository) {
+    public EventService(EventRepository eventRepository, EventoPublisher eventoPublisher) {
         this.eventRepository = eventRepository;
+        this.eventoPublisher = eventoPublisher;
     }
 
     @Transactional
@@ -70,10 +73,21 @@ public class EventService {
     }
 
     @Transactional
-    public Evento cancelar(Long promotorId, Long eventoId) {
+    public Evento cancelar(Long eventoId, Long promotorId) {
         Evento evento = carregarComOwnership(promotorId, eventoId);
         evento.cancelar();
-        return eventRepository.save(evento);
+        Evento salvo = eventRepository.save(evento);
+        eventoPublisher.publicarEventoCancelado(salvo);
+        return salvo;
+    }
+
+    @Transactional
+    public Evento encerrar(Long eventoId, Long promotorId) {
+        Evento evento = carregarComOwnership(promotorId, eventoId);
+        evento.realizar();
+        Evento salvo = eventRepository.save(evento);
+        eventoPublisher.publicarEventoFinalizado(salvo);
+        return salvo;
     }
 
     @Transactional(readOnly = true)

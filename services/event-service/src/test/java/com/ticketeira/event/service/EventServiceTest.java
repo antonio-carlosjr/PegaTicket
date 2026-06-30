@@ -7,6 +7,7 @@ import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
 import com.ticketeira.event.dto.EventoUpdateRequest;
+import com.ticketeira.event.messaging.EventoPublisher;
 import com.ticketeira.event.repository.EventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,9 @@ class EventServiceTest {
 
     @Mock
     private EventRepository eventRepository;
+
+    @Mock
+    private EventoPublisher eventoPublisher;
 
     @InjectMocks
     private EventService eventService;
@@ -127,7 +131,7 @@ class EventServiceTest {
         when(eventRepository.findById(5L)).thenReturn(Optional.of(evento));
         when(eventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Evento resultado = eventService.cancelar(1L, 5L);
+        Evento resultado = eventService.cancelar(5L, 1L);
 
         assertThat(resultado.getStatus()).isEqualTo(StatusEvento.CANCELADO);
     }
@@ -142,7 +146,7 @@ class EventServiceTest {
         when(eventRepository.findById(5L)).thenReturn(Optional.of(evento));
         when(eventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Evento resultado = eventService.cancelar(1L, 5L);
+        Evento resultado = eventService.cancelar(5L, 1L);
 
         assertThat(resultado.getStatus()).isEqualTo(StatusEvento.CANCELADO);
     }
@@ -194,7 +198,7 @@ class EventServiceTest {
                 "Local", TipoEvento.GRATUITO, 50, null, null, null);
         when(eventRepository.findById(7L)).thenReturn(Optional.of(evento));
 
-        assertThatThrownBy(() -> eventService.cancelar(1L, 7L))
+        assertThatThrownBy(() -> eventService.cancelar(7L, 1L))
                 .isInstanceOf(NotFoundException.class);
 
         verify(eventRepository, never()).save(any());
