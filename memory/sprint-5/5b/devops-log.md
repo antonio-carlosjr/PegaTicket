@@ -43,3 +43,20 @@ Fora desta trilha: 5C (carga/observabilidade/hardening).
 
 ## Fase 6 — relatórios
 - `test-report.md` + `bugs.md` escritos. P0/P1 remanescentes locais: **0**. Integração Testcontainers pendente de CI (padrão S4/5A).
+
+## Fase 7 — aceite do PO
+- `po-acceptance.md`: **ACEITO COM RESSALVAS** (condicional ao CI); US-025 aceite pleno. Aprovado pelo humano no gate.
+
+## validar-sprint 5b (CI + Revisor + PR)
+- Passo 1 CI local: reactor `verify` SUCCESS + frontend 97/97.
+- Passo 2 Revisor (opus): `code-review.md` — APROVADO COM RESSALVAS (P0=0, P1=1 aplicado CR-5B-01, P2=3, P3=2). Fix commit `f509317` (WARN + teste) + `9a44362` (doc CR-5B-02).
+- Passo 3 regressão: `regression-report.md` — backend 307 / frontend 97, 0 falhas.
+- Passo 4 PR: **[#21](https://github.com/antonio-carlosjr/PegaTicket/pull/21)** (`feat/sprint-5-experiencia` → `main`). **Sem merge (decisão humana).**
+
+## Commits (validar)
+| # | Tipo | Assunto |
+|---|---|---|
+| 9 | fix | publisher WARN + InscricaoCanceladaPublisherTest (CR-5B-01/05) |
+| 10 | docs | code-review + alinha architecture.md (CR-5B-02) |
+| 11 | docs | regression-report (Passo 3) |
+| 12 | docs | pr-body (Passo 4) |
