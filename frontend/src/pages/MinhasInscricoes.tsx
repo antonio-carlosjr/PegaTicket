@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { PageLoader } from '@/components/ui/spinner'
 import { toast } from '@/components/ui/toaster'
+import { CancelarInscricao } from '@/pages/CancelarInscricao'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -119,7 +120,12 @@ export function MinhasInscricoes() {
 
           <div className="space-y-3">
             {inscricoes.map((ins) => (
-              <InscricaoItem key={ins.id} inscricao={ins} nomeEvento={nomesEventos[ins.eventoId]} />
+              <InscricaoItem
+                key={ins.id}
+                inscricao={ins}
+                nomeEvento={nomesEventos[ins.eventoId]}
+                onCancelado={() => void carregar(page)}
+              />
             ))}
           </div>
 
@@ -157,29 +163,64 @@ export function MinhasInscricoes() {
 
 // ─── Item individual ──────────────────────────────────────────────────────────
 
-function InscricaoItem({ inscricao, nomeEvento }: { inscricao: InscricaoHistoricoResponse; nomeEvento?: string }) {
+function InscricaoItem({
+  inscricao,
+  nomeEvento,
+  onCancelado,
+}: {
+  inscricao: InscricaoHistoricoResponse
+  nomeEvento?: string
+  onCancelado: () => void
+}) {
+  const [mostrarCancelar, setMostrarCancelar] = useState(false)
+  const podeCancelar =
+    inscricao.status === 'ATIVA' || inscricao.status === 'PENDENTE_PAGAMENTO'
+
   return (
-    <Card>
-      <CardContent className="flex items-center justify-between gap-4 p-4">
-        <div className="flex items-start gap-3">
-          <ClipboardList className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-foreground">
-              {nomeEvento ?? `Evento #${inscricao.eventoId}`}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Inscrição #{inscricao.id}
-            </p>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Calendar className="h-3.5 w-3.5" />
-              <span>{formatarDataHora(inscricao.inscritoEm)}</span>
+    <div className="space-y-2">
+      <Card>
+        <CardContent className="flex items-center justify-between gap-4 p-4">
+          <div className="flex items-start gap-3">
+            <ClipboardList className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" aria-hidden="true" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                {nomeEvento ?? `Evento #${inscricao.eventoId}`}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Inscrição #{inscricao.id}
+              </p>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" />
+                <span>{formatarDataHora(inscricao.inscritoEm)}</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex-shrink-0">
-          {badgeStatusInscricao(inscricao.status)}
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex flex-shrink-0 items-center gap-3">
+            {badgeStatusInscricao(inscricao.status)}
+            {podeCancelar && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMostrarCancelar((v) => !v)}
+                aria-label={mostrarCancelar ? 'Fechar cancelamento' : 'Cancelar esta inscrição'}
+              >
+                {mostrarCancelar ? 'Fechar' : 'Cancelar'}
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Cancelamento sob demanda (US-035) — evita poluir a lista e duplicar dados */}
+      {podeCancelar && mostrarCancelar && (
+        <CancelarInscricao
+          inscricao={inscricao}
+          onCancelado={() => {
+            setMostrarCancelar(false)
+            onCancelado()
+          }}
+        />
+      )}
+    </div>
   )
 }
