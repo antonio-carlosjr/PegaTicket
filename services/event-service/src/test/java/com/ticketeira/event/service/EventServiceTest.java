@@ -6,8 +6,11 @@ import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
+import com.ticketeira.event.dto.EventoResponse;
 import com.ticketeira.event.dto.EventoUpdateRequest;
+import com.ticketeira.event.dto.ReputacaoResponse;
 import com.ticketeira.event.messaging.EventoPublisher;
+import com.ticketeira.event.repository.AvaliacaoRepository;
 import com.ticketeira.event.repository.EventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +26,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +39,9 @@ class EventServiceTest {
 
     @Mock
     private EventoPublisher eventoPublisher;
+
+    @Mock
+    private AvaliacaoRepository avaliacaoRepository;
 
     @InjectMocks
     private EventService eventService;
@@ -260,10 +267,11 @@ class EventServiceTest {
                 "Local", TipoEvento.GRATUITO, 50, null, null, null);
         evento.publicar();
         when(eventRepository.findById(1L)).thenReturn(Optional.of(evento));
+        when(avaliacaoRepository.agregarReputacao(anyLong())).thenReturn(new ReputacaoResponse(null, 0L));
 
-        Evento resultado = eventService.detalhe(999L, 1L);
+        EventoResponse resultado = eventService.detalhe(999L, 1L);
 
-        assertThat(resultado.getStatus()).isEqualTo(StatusEvento.PUBLICADO);
+        assertThat(resultado.status()).isEqualTo(StatusEvento.PUBLICADO);
     }
 
     @Test
@@ -285,10 +293,11 @@ class EventServiceTest {
                 OffsetDateTime.now().plusDays(1).plusHours(2),
                 "Local", TipoEvento.GRATUITO, 50, null, null, null);
         when(eventRepository.findById(1L)).thenReturn(Optional.of(evento));
+        when(avaliacaoRepository.agregarReputacao(anyLong())).thenReturn(new ReputacaoResponse(null, 0L));
 
-        Evento resultado = eventService.detalhe(1L, 1L);
+        EventoResponse resultado = eventService.detalhe(1L, 1L);
 
-        assertThat(resultado.getStatus()).isEqualTo(StatusEvento.RASCUNHO);
+        assertThat(resultado.status()).isEqualTo(StatusEvento.RASCUNHO);
     }
 
     @Test

@@ -91,7 +91,7 @@ class InscricaoConcorrenciaTest {
 
         when(eventClient.getEvento(anyLong()))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
         doNothing().when(eventClient).reservarVaga(anyLong());
         doNothing().when(eventClient).liberarVaga(anyLong());
     }
@@ -167,7 +167,8 @@ class InscricaoConcorrenciaTest {
         // Sprint 4: evento PAGO agora e suportado — cria PENDENTE_PAGAMENTO
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Festival Pago", "PAGO", "PUBLICADO", 10, 100,
-                        new java.math.BigDecimal("99.00"), 1L));
+                        new java.math.BigDecimal("99.00"), 1L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
 
         org.mockito.Mockito.doNothing().when(pedidoCriadoPublisher)
                 .publicar(org.mockito.ArgumentMatchers.any());
@@ -184,7 +185,7 @@ class InscricaoConcorrenciaTest {
     void inscrever_eventoNaoPublicado_lanca422() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
 
         try {
             inscricaoService.inscrever(EVENTO_ID, USUARIO_ID);

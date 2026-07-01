@@ -64,7 +64,7 @@ class TicketControllerIntegrationTest {
 
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
         doNothing().when(eventClient).reservarVaga(anyLong());
         doNothing().when(eventClient).liberarVaga(anyLong());
     }
@@ -156,7 +156,7 @@ class TicketControllerIntegrationTest {
         Long evento2 = 43L;
         when(eventClient.getEvento(evento2))
                 .thenReturn(new EventResumo(evento2, "Show 2", "GRATUITO", "PUBLICADO", 5, 50,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
 
         mvc.perform(post("/tickets/inscricoes")
                         .header("X-User-Id", USUARIO_ID)

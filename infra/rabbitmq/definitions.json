@@ -124,6 +124,23 @@
       "durable": true,
       "auto_delete": false,
       "arguments": {}
+    },
+    {
+      "name": "inscricao.cancelada",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-dead-letter-exchange": "ticketeira.dlx",
+        "x-dead-letter-routing-key": "inscricao.cancelada"
+      }
+    },
+    {
+      "name": "inscricao.cancelada.dlq",
+      "vhost": "/",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
     }
   ],
   "bindings": [
@@ -205,6 +222,22 @@
       "destination": "evento.cancelado.ticket.dlq",
       "destination_type": "queue",
       "routing_key": "evento.cancelado.ticket",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.events",
+      "vhost": "/",
+      "destination": "inscricao.cancelada",
+      "destination_type": "queue",
+      "routing_key": "inscricao.cancelada",
+      "arguments": {}
+    },
+    {
+      "source": "ticketeira.dlx",
+      "vhost": "/",
+      "destination": "inscricao.cancelada.dlq",
+      "destination_type": "queue",
+      "routing_key": "inscricao.cancelada",
       "arguments": {}
     }
   ],

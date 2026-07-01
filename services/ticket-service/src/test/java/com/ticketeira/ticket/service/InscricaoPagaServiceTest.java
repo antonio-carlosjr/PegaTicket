@@ -80,7 +80,8 @@ class InscricaoPagaServiceTest {
         // Evento PAGO PUBLICADO com preco=100
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
-                        new BigDecimal("100.00"), 5L));
+                        new BigDecimal("100.00"), 5L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
 
         // Mock do save retorna inscricao com PENDENTE_PAGAMENTO
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoPendente(1L);
@@ -103,7 +104,8 @@ class InscricaoPagaServiceTest {
     void inscrever_eventoPago_publicaPedidoCriado_registraAfterCommit() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
-                        new BigDecimal("100.00"), 5L));
+                        new BigDecimal("100.00"), 5L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoPendente(1L);
         when(inscricaoRepository.save(any())).thenReturn(inscricaoSalva);
@@ -120,7 +122,8 @@ class InscricaoPagaServiceTest {
     void inscrever_eventoPago_esgotado_lanca409_nenhumPedidoCriado() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 0, 100,
-                        new BigDecimal("100.00"), 5L));
+                        new BigDecimal("100.00"), 5L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
         doThrow(new BusinessException("EVENTO_ESGOTADO", 409))
                 .when(eventClient).reservarVaga(EVENTO_ID);
 
@@ -139,7 +142,7 @@ class InscricaoPagaServiceTest {
     void inscrever_eventoGratuito_emiteIngressoImediato_intacto() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Workshop", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 5L));
+                        null, 5L, java.time.OffsetDateTime.now().plusDays(30), null));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoAtiva(2L);
         com.ticketeira.ticket.domain.Ingresso ingressoSalvo = mockIngresso(2L, 2L);

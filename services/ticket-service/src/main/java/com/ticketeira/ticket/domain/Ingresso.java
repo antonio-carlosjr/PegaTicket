@@ -1,5 +1,6 @@
 package com.ticketeira.ticket.domain;
 
+import com.ticketeira.common.exception.BusinessException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -53,6 +54,24 @@ public class Ingresso {
         if (status == StatusIngresso.UTILIZADO) return;
         if (status == StatusIngresso.CANCELADO) {
             throw new IllegalStateException("Ingresso cancelado nao pode ser utilizado.");
+        }
+        this.status = StatusIngresso.UTILIZADO;
+    }
+
+    /**
+     * Check-in da porta (US-034): ATIVO -> UTILIZADO.
+     * DIFERENTE de utilizar() (5A): aqui o 2o check-in deve FALHAR com 409
+     * (criterio US-034.2), nao ser no-op idempotente.
+     * - ATIVO     -> UTILIZADO (sucesso)
+     * - UTILIZADO -> lanca BusinessException("INGRESSO_JA_UTILIZADO", 409)
+     * - CANCELADO -> nao reaproveita; lanca BusinessException("INGRESSO_JA_UTILIZADO", 409)
+     */
+    public void realizarCheckin() {
+        if (status == StatusIngresso.UTILIZADO) {
+            throw new BusinessException("INGRESSO_JA_UTILIZADO", 409);
+        }
+        if (status == StatusIngresso.CANCELADO) {
+            throw new BusinessException("INGRESSO_JA_UTILIZADO", 409);
         }
         this.status = StatusIngresso.UTILIZADO;
     }

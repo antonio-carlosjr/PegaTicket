@@ -34,4 +34,25 @@ public interface InscricaoRepository extends JpaRepository<Inscricao, Long> {
          + "com.ticketeira.ticket.domain.StatusInscricao.ATIVA, "
          + "com.ticketeira.ticket.domain.StatusInscricao.PENDENTE_PAGAMENTO)")
     int cancelarInscricoesDoEvento(@Param("eventoId") Long eventoId);
+
+    /**
+     * Cancelamento voluntario do participante (US-035): transicao condicional atomica.
+     * Retorna 1 se cancelou (estava ATIVA|PENDENTE_PAGAMENTO), 0 se ja CANCELADA/EXPIRADA.
+     * Row lock do Postgres serializa 2 cancelamentos concorrentes -> 1 vence, 0 no 2o -> 409.
+     */
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE Inscricao i SET i.status = com.ticketeira.ticket.domain.StatusInscricao.CANCELADA "
+         + "WHERE i.id = :id AND i.status IN ("
+         + "com.ticketeira.ticket.domain.StatusInscricao.ATIVA, "
+         + "com.ticketeira.ticket.domain.StatusInscricao.PENDENTE_PAGAMENTO)")
+    int cancelarPorParticipante(@Param("id") Long id);
+
+    /**
+     * Verifica elegibilidade de avaliacao (US-024, parte do ticket — PO-D1).
+     * Retorna true sse, para usuario+evento: existe Inscricao ATIVA.
+     * Combinado no service com existsByInscricaoUtilizada para cobrir os 2 casos.
+     */
+    boolean existsByUsuarioIdAndEventoIdAndStatus(
+            Long usuarioId, Long eventoId,
+            com.ticketeira.ticket.domain.StatusInscricao status);
 }

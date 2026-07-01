@@ -74,7 +74,7 @@ class InscricaoServiceTest {
         // Defaults: evento GRATUITO PUBLICADO, usuario nao inscrito
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show Gratuito", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
         when(inscricaoRepository.existsByUsuarioIdAndEventoId(USUARIO_ID, EVENTO_ID)).thenReturn(false);
     }
 
@@ -118,7 +118,8 @@ class InscricaoServiceTest {
         // Sprint 4: evento PAGO agora e suportado (ramo PAGO da saga)
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Festival", "PAGO", "PUBLICADO", 10, 100,
-                        new java.math.BigDecimal("99.00"), 1L));
+                        new java.math.BigDecimal("99.00"), 1L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoPaga =
                 com.ticketeira.ticket.domain.Inscricao.pendentePagamento(USUARIO_ID, EVENTO_ID);
@@ -141,7 +142,7 @@ class InscricaoServiceTest {
     void inscrever_eventoNaoPublicado_lanca422_semReservar() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100,
-                        null, 1L));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
 
         assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
                 .isInstanceOf(BusinessException.class)

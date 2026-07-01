@@ -7,8 +7,34 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface IngressoRepository extends JpaRepository<Ingresso, Long> {
+
+    /**
+     * Lookup por codigo_unico para check-in (US-034). Usa UNIQUE(codigo_unico) — O(1).
+     */
+    Optional<Ingresso> findByCodigoUnico(String codigoUnico);
+
+    /**
+     * Busca ingresso de uma inscricao (para cancelar no fluxo voluntario, US-035).
+     */
+    Optional<Ingresso> findByInscricaoId(Long inscricaoId);
+
+    /**
+     * Verifica se existe ingresso UTILIZADO para usuario+evento (elegibilidade US-024).
+     * JOIN inscricao para obter usuario_id e evento_id.
+     * Usa idx_inscricoes_usuario / idx_inscricoes_evento (V1).
+     */
+    @Query("""
+            SELECT COUNT(ing) > 0 FROM Ingresso ing
+            JOIN Inscricao ins ON ing.inscricaoId = ins.id
+            WHERE ins.usuarioId = :usuarioId AND ins.eventoId = :eventoId
+              AND ing.status = com.ticketeira.ticket.domain.StatusIngresso.UTILIZADO
+            """)
+    boolean existsIngressoUtilizadoByUsuarioIdAndEventoId(
+            @Param("usuarioId") Long usuarioId,
+            @Param("eventoId") Long eventoId);
 
     /**
      * Busca ingressos do usuario via join com inscricoes, sem N+1.

@@ -5,6 +5,7 @@ import com.ticketeira.common.exception.NotFoundException;
 import com.ticketeira.payment.domain.ConfiguracaoPlataforma;
 import com.ticketeira.payment.domain.Pagamento;
 import com.ticketeira.payment.domain.ProcessedEvent;
+import com.ticketeira.payment.domain.Reembolso;
 import com.ticketeira.payment.domain.StatusPagamento;
 import com.ticketeira.payment.dto.PagamentoResponse;
 import com.ticketeira.payment.messaging.PagamentoAprovadoPublisher;
@@ -12,6 +13,7 @@ import com.ticketeira.payment.messaging.PedidoCriadoEvent;
 import com.ticketeira.payment.repository.ConfiguracaoPlataformaRepository;
 import com.ticketeira.payment.repository.PagamentoRepository;
 import com.ticketeira.payment.repository.ProcessedEventRepository;
+import com.ticketeira.payment.repository.ReembolsoRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -38,20 +40,37 @@ public class PagamentoService {
     private final GatewaySimulado gatewaySimulado;
     private final PagamentoAprovadoPublisher publisher;
     private final PlatformTransactionManager txManager;
+    private final ReembolsoRepository reembolsoRepository;
 
     // Injetado separado para criarPendente (que usa @Transactional declarativo)
     private ProcessedEventRepository processedEventRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public PagamentoService(PagamentoRepository pagamentoRepository,
                             ConfiguracaoPlataformaRepository configuracaoRepository,
                             GatewaySimulado gatewaySimulado,
                             PagamentoAprovadoPublisher publisher,
-                            PlatformTransactionManager txManager) {
+                            PlatformTransactionManager txManager,
+                            ReembolsoRepository reembolsoRepository) {
         this.pagamentoRepository = pagamentoRepository;
         this.configuracaoRepository = configuracaoRepository;
         this.gatewaySimulado = gatewaySimulado;
         this.publisher = publisher;
         this.txManager = txManager;
+        this.reembolsoRepository = reembolsoRepository;
+    }
+
+    /**
+     * Construtor de compatibilidade para testes unitarios (AfterCommitRollbackTest) que
+     * instanciam o service diretamente sem injecao de ReembolsoRepository.
+     * O reembolsarPorInscricao nao e chamado nesses testes; reembolsoRepository fica null.
+     */
+    public PagamentoService(PagamentoRepository pagamentoRepository,
+                            ConfiguracaoPlataformaRepository configuracaoRepository,
+                            GatewaySimulado gatewaySimulado,
+                            PagamentoAprovadoPublisher publisher,
+                            PlatformTransactionManager txManager) {
+        this(pagamentoRepository, configuracaoRepository, gatewaySimulado, publisher, txManager, null);
     }
 
     // Injecao por setter para compatibilidade com o construtor dos testes unitarios
@@ -198,6 +217,32 @@ public class PagamentoService {
             return pagamentoRepository.findByStatus(status, pageable).map(PagamentoResponse::from);
         }
         return pagamentoRepository.findAll(pageable).map(PagamentoResponse::from);
+    }
+
+    /**
+     * Reembolso individual por cancelamento do participante (US-035 / US-042 individual).
+     * Reusa reembolsar() + Reembolso.criar; idempotencia/ack-noop ficam no listener.
+     * Retorna true se reembolsou (estava CONFIRMADO), false se no-op.
+     * Estrategia de concorrencia: findByInscricaoIdForUpdate usa PESSIMISTIC_WRITE —
+     * serializa corrida vs. reembolso em massa no mesmo pagamento (CR-S4-01).
+     */
+    @Transactional
+    public boolean reembolsarPorInscricao(Long inscricaoId, String motivo) {
+        var pagOpt = pagamentoRepository.findByInscricaoIdForUpdate(inscricaoId);
+        if (pagOpt.isEmpty()) {
+            log.info("Sem pagamento para inscricaoId={} — ACK no-op (gratuito/defesa)", inscricaoId);
+            return false;
+        }
+        Pagamento p = pagOpt.get();
+        if (!p.reembolsar()) {
+            log.info("Pagamento inscricaoId={} nao-CONFIRMADO (status={}) — ACK no-op (CR-S4-01)",
+                    inscricaoId, p.getStatus());
+            return false;
+        }
+        pagamentoRepository.save(p);
+        reembolsoRepository.save(Reembolso.criar(p.getId(), p.getUsuarioId(), p.getValorBruto(), motivo));
+        log.info("Reembolso individual aplicado: inscricaoId={}, motivo={}", inscricaoId, motivo);
+        return true;
     }
 
     private BigDecimal obterTaxaVigente() {

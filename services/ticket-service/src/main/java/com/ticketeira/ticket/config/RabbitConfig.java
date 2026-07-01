@@ -38,6 +38,10 @@ public class RabbitConfig {
     static final String QUEUE_EVENTO_CANCELADO_TK = "evento.cancelado.ticket";
     static final String RK_EVENTO_CANCELADO = "evento.cancelado";
 
+    // Fila inscricao.cancelada (ticket produz; payment consome; declarada aqui para testes Testcontainers)
+    static final String QUEUE_INSCRICAO_CANCELADA = "inscricao.cancelada";
+    static final String RK_INSCRICAO_CANCELADA = "inscricao.cancelada";
+
     @Bean
     public TopicExchange ticketeiraEvents() {
         return new TopicExchange(EXCHANGE, true, false);
@@ -129,6 +133,35 @@ public class RabbitConfig {
         return BindingBuilder.bind(filaEventoCanceladoTicketDlq())
                 .to(tickeiraDlx())
                 .with(QUEUE_EVENTO_CANCELADO_TK);
+    }
+
+    // --- inscricao.cancelada (ticket produz; payment consome; declarada p/ testes Testcontainers) ---
+
+    @Bean
+    public Queue filaInscricaoCancelada() {
+        return QueueBuilder.durable(QUEUE_INSCRICAO_CANCELADA)
+                .withArgument("x-dead-letter-exchange", DLX)
+                .withArgument("x-dead-letter-routing-key", QUEUE_INSCRICAO_CANCELADA)
+                .build();
+    }
+
+    @Bean
+    public Queue filaInscricaoCanceladaDlq() {
+        return QueueBuilder.durable(QUEUE_INSCRICAO_CANCELADA + ".dlq").build();
+    }
+
+    @Bean
+    public Binding bindingInscricaoCancelada() {
+        return BindingBuilder.bind(filaInscricaoCancelada())
+                .to(ticketeiraEvents())
+                .with(RK_INSCRICAO_CANCELADA);
+    }
+
+    @Bean
+    public Binding bindingInscricaoCanceladaDlq() {
+        return BindingBuilder.bind(filaInscricaoCanceladaDlq())
+                .to(tickeiraDlx())
+                .with(QUEUE_INSCRICAO_CANCELADA);
     }
 
     // O RabbitTemplate e o ConnectionFactory sao auto-configurados pelo Spring Boot

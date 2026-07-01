@@ -7,6 +7,28 @@ export type StatusEvento = 'RASCUNHO' | 'PUBLICADO' | 'CANCELADO' | 'REALIZADO'
 
 // ─── Tipos de response ────────────────────────────────────────────────────────
 
+/** Reputação agregada do evento — US-025. media=null quando total=0. */
+export interface ReputacaoResponse {
+  media: number | null
+  total: number
+}
+
+/** Response de avaliação criada — US-024. */
+export interface AvaliacaoResponse {
+  id: number
+  eventoId: number
+  usuarioId: number
+  nota: number
+  comentario: string | null
+  avaliadoEm: string  // ISO-8601
+}
+
+/** Request de avaliação de evento — US-024. */
+export interface AvaliacaoRequest {
+  nota: number        // 1–5
+  comentario?: string | null
+}
+
 /** Response completo do evento (detalhe e criação/edição). */
 export interface EventoResponse {
   id: number
@@ -25,6 +47,8 @@ export interface EventoResponse {
   promotorId: number
   criadoEm: string
   atualizadoEm: string
+  /** Reputação do evento — US-025. Adicionado na Sprint 5B (campo aditivo). */
+  reputacao?: ReputacaoResponse
 }
 
 /** Projeção enxuta usada nas listagens. */
@@ -138,8 +162,17 @@ export async function listarEventos(
   return data
 }
 
-/** GET /api/events/:id — detalhe do evento (qualquer autenticado). */
+/** GET /api/events/:id — detalhe do evento (qualquer autenticado). Inclui reputacao (US-025). */
 export async function detalheEvento(id: number): Promise<EventoResponse> {
   const { data } = await api.get<EventoResponse>(`/api/events/${id}`)
+  return data
+}
+
+/**
+ * POST /api/events/:id/avaliacoes — avalia o evento (US-024).
+ * 201 → AvaliacaoResponse; 409 AVALIACAO_DUPLICADA; 403 AVALIACAO_NAO_ELEGIVEL; 400 nota inválida.
+ */
+export async function avaliar(id: number, payload: AvaliacaoRequest): Promise<AvaliacaoResponse> {
+  const { data } = await api.post<AvaliacaoResponse>(`/api/events/${id}/avaliacoes`, payload)
   return data
 }
