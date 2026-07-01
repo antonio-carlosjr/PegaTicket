@@ -1,5 +1,5 @@
 import { Link, Outlet } from 'react-router-dom'
-import { LogOut, PlusCircle, Ticket, User2 } from 'lucide-react'
+import { ClipboardList, LogOut, PlusCircle, ScanLine, Ticket, User2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -36,6 +36,15 @@ export function AppLayout() {
               <span className="hidden sm:inline">Meus ingressos</span>
             </Link>
 
+            {/* ── Minhas inscrições (todos os autenticados) — hospeda o cancelamento (US-035) ── */}
+            <Link
+              to="/minhas-inscricoes"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary"
+            >
+              <ClipboardList className="h-4 w-4" />
+              <span className="hidden sm:inline">Minhas inscrições</span>
+            </Link>
+
             {/* ── Itens exclusivos do PROMOTOR ── */}
             {ehPromotor && (
               <>
@@ -44,6 +53,14 @@ export function AppLayout() {
                   className="text-sm font-medium text-foreground hover:text-primary"
                 >
                   Meus eventos
+                </Link>
+                <Link
+                  to="/check-in"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary"
+                  aria-label="Scanner de check-in"
+                >
+                  <ScanLine className="h-4 w-4" />
+                  <span className="hidden sm:inline">Check-in</span>
                 </Link>
                 <Link
                   to="/eventos/novo"

@@ -45,10 +45,11 @@ function formatarDataHora(iso: string): string {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 interface CheckinScannerProps {
-  eventoId: number
+  /** Opcional: o back deriva o evento/ownership do proprio codigo do ingresso. */
+  eventoId?: number
 }
 
-export function CheckinScanner({ eventoId: _eventoId }: CheckinScannerProps) {
+export function CheckinScanner(_props: CheckinScannerProps = {}) {
   const [codigo, setCodigo] = useState('')
   const [carregando, setCarregando] = useState(false)
   const [resultado, setResultado] = useState<CheckinResponse | null>(null)

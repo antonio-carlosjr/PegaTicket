@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { Login } from '@/pages/Login'
 import { Register } from '@/pages/Register'
@@ -18,12 +18,20 @@ import { AppLayout } from '@/components/AppLayout'
 import { AdminRoute } from '@/components/AdminRoute'
 import { PromotorRoute } from '@/components/PromotorRoute'
 import { AdminUsuarios } from '@/pages/AdminUsuarios'
+import { CheckinScanner } from '@/pages/CheckinScanner'
+import { AvaliacaoEvento } from '@/pages/AvaliacaoEvento'
 
 function GuestOnly({ children }: { children: React.ReactNode }) {
   const { token, loading } = useAuth()
   if (loading) return null
   if (token) return <Navigate to="/" replace />
   return <>{children}</>
+}
+
+/** Le o :id da rota e injeta como prop no componente de avaliacao (US-024/025). */
+function AvaliarEventoRoute() {
+  const { id } = useParams<{ id: string }>()
+  return <AvaliacaoEvento eventoId={Number(id)} />
 }
 
 export function AppRoutes() {
@@ -49,6 +57,8 @@ export function AppRoutes() {
         {/* Eventos — qualquer autenticado */}
         <Route path="/eventos" element={<Eventos />} />
         <Route path="/eventos/:id" element={<EventoDetalhe />} />
+        {/* Avaliar evento + reputação (US-024/025) — qualquer autenticado (elegibilidade no back) */}
+        <Route path="/eventos/:id/avaliar" element={<AvaliarEventoRoute />} />
 
         {/* Meus eventos + Criar/Editar — apenas PROMOTOR */}
         <Route
@@ -62,6 +72,12 @@ export function AppRoutes() {
         <Route
           path="/eventos/:id/editar"
           element={<PromotorRoute><CriarEditarEvento /></PromotorRoute>}
+        />
+
+        {/* Check-in por QR (US-034) — apenas PROMOTOR */}
+        <Route
+          path="/check-in"
+          element={<PromotorRoute><CheckinScanner /></PromotorRoute>}
         />
 
         {/* Ingressos e inscrições — qualquer autenticado */}

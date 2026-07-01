@@ -6,6 +6,7 @@ import {
   Clock,
   Image as ImageIcon,
   MapPin,
+  Star,
   Tag,
   Ticket,
   Users,
@@ -197,6 +198,18 @@ export function EventoDetalhe() {
           </Badge>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">{evento.titulo}</h1>
+        {/* Reputação + avaliação (US-024/025) */}
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <ReputacaoInline reputacao={evento.reputacao} />
+          <Link
+            to={`/eventos/${evento.id}/avaliar`}
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
+            aria-label="Avaliar evento e ver avaliações"
+          >
+            <Star className="h-4 w-4" />
+            Avaliar evento
+          </Link>
+        </div>
       </div>
 
       {/* Card de informações */}
@@ -362,6 +375,28 @@ export function EventoDetalhe() {
         </div>
       )}
     </div>
+  )
+}
+
+/** Reputação compacta no cabeçalho do evento (US-025). Nulo/zero → convite a avaliar. */
+function ReputacaoInline({ reputacao }: { reputacao?: { media: number | null; total: number } }) {
+  const total = reputacao?.total ?? 0
+  if (total === 0) {
+    return <span className="text-sm text-muted-foreground">Sem avaliações ainda</span>
+  }
+  const media = reputacao?.media
+  return (
+    <span className="inline-flex items-center gap-1.5 text-sm">
+      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" aria-hidden="true" />
+      <strong>
+        {media != null
+          ? media.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+          : '—'}
+      </strong>
+      <span className="text-muted-foreground">
+        ({total} avaliação{total !== 1 ? 'ões' : ''})
+      </span>
+    </span>
   )
 }
 
