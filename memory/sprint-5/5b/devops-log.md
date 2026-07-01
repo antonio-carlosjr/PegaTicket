@@ -28,3 +28,18 @@ Fora desta trilha: 5C (carga/observabilidade/hardening).
 | # | Tipo | Assunto | Fase |
 |---|---|---|---|
 | 1 | docs | inicia trilha 5B (ADR-P11 atualizado; devops-log) | 0 |
+| 2 | docs | arquitetura, contratos, modelo de dados e spec de testes (ADR-T14/T15/T16) | 3 |
+| 3 | docs | validação do PO (APROVADO COM RESSALVAS) | 3 |
+| 4 | test | suíte vermelha (check-in, cancelamento+reembolso individual, avaliação/reputação, participou) — Testcontainers singleton | 4 |
+| 5 | feat | ticket: check-in QR + cancelamento+reembolso individual + canal participou (US-034/035/024) | 5 |
+| 6 | feat | event: avaliação (1-5) + reputação (média/total) + TicketClient (US-024/025) | 5 |
+| 7 | feat | payment: reembolso individual ao cancelar inscrição paga (US-035) | 5 |
+| 8 | feat | frontend: telas de check-in, cancelar inscrição e avaliar evento | 5 |
+
+## Fase 5 — implementação (VERDE)
+- Reactor `./mvnw -B -ntp verify` → **BUILD SUCCESS** (7 módulos). Frontend **97/97** + `tsc` limpo.
+- 4 defeitos caçados na verificação local e corrigidos **antes** do commit da implementação (ver `bugs.md`): publishers com RabbitTemplate opcional (38 context-errors), `CancelamentoControllerTest` sem `@Transactional` (REQUIRES_NEW vs seed não-commitado), handler `MissingServletRequestParameter` → 400.
+- Totais: event 121 (11 skip), ticket 101 (22 skip), payment 53 (32 skip) — 0 fail/0 err. Skipped = Testcontainers (CI).
+
+## Fase 6 — relatórios
+- `test-report.md` + `bugs.md` escritos. P0/P1 remanescentes locais: **0**. Integração Testcontainers pendente de CI (padrão S4/5A).
