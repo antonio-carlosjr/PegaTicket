@@ -25,15 +25,17 @@ public class RabbitConfig {
     public static final String EXCHANGE_EVENTS = "ticketeira.events";
     public static final String EXCHANGE_DLX = "ticketeira.dlx";
 
-    public static final String QUEUE_PEDIDO_CRIADO      = "pedido.criado";
-    public static final String QUEUE_PAGAMENTO_APROVADO = "pagamento.aprovado";
-    public static final String QUEUE_EVENTO_FINALIZADO  = "evento.finalizado";
-    public static final String QUEUE_EVENTO_CANCELADO   = "evento.cancelado";
+    public static final String QUEUE_PEDIDO_CRIADO        = "pedido.criado";
+    public static final String QUEUE_PAGAMENTO_APROVADO   = "pagamento.aprovado";
+    public static final String QUEUE_EVENTO_FINALIZADO    = "evento.finalizado";
+    public static final String QUEUE_EVENTO_CANCELADO     = "evento.cancelado";
+    public static final String QUEUE_INSCRICAO_CANCELADA  = "inscricao.cancelada";
 
-    public static final String QUEUE_PEDIDO_CRIADO_DLQ      = "pedido.criado.dlq";
-    public static final String QUEUE_PAGAMENTO_APROVADO_DLQ = "pagamento.aprovado.dlq";
-    public static final String QUEUE_EVENTO_FINALIZADO_DLQ  = "evento.finalizado.dlq";
-    public static final String QUEUE_EVENTO_CANCELADO_DLQ   = "evento.cancelado.dlq";
+    public static final String QUEUE_PEDIDO_CRIADO_DLQ       = "pedido.criado.dlq";
+    public static final String QUEUE_PAGAMENTO_APROVADO_DLQ  = "pagamento.aprovado.dlq";
+    public static final String QUEUE_EVENTO_FINALIZADO_DLQ   = "evento.finalizado.dlq";
+    public static final String QUEUE_EVENTO_CANCELADO_DLQ    = "evento.cancelado.dlq";
+    public static final String QUEUE_INSCRICAO_CANCELADA_DLQ = "inscricao.cancelada.dlq";
 
     @Bean
     public MessageConverter jsonMessageConverter() {
@@ -86,6 +88,14 @@ public class RabbitConfig {
                 .build();
     }
 
+    @Bean
+    public Queue queueInscricaoCancelada() {
+        return QueueBuilder.durable(QUEUE_INSCRICAO_CANCELADA)
+                .withArgument("x-dead-letter-exchange", EXCHANGE_DLX)
+                .withArgument("x-dead-letter-routing-key", QUEUE_INSCRICAO_CANCELADA)
+                .build();
+    }
+
     // --- Filas DLQ ---
 
     @Bean
@@ -106,6 +116,11 @@ public class RabbitConfig {
     @Bean
     public Queue queueEventoCanceladoDlq() {
         return QueueBuilder.durable(QUEUE_EVENTO_CANCELADO_DLQ).build();
+    }
+
+    @Bean
+    public Queue queueInscricaoCanceladaDlq() {
+        return QueueBuilder.durable(QUEUE_INSCRICAO_CANCELADA_DLQ).build();
     }
 
     // --- Bindings: exchange principal -> filas ---
@@ -130,6 +145,11 @@ public class RabbitConfig {
         return BindingBuilder.bind(queueEventoCancelado()).to(exchangeEvents()).with(QUEUE_EVENTO_CANCELADO);
     }
 
+    @Bean
+    public Binding bindingInscricaoCancelada() {
+        return BindingBuilder.bind(queueInscricaoCancelada()).to(exchangeEvents()).with(QUEUE_INSCRICAO_CANCELADA);
+    }
+
     // --- Bindings: DLX -> DLQ ---
 
     @Bean
@@ -150,5 +170,10 @@ public class RabbitConfig {
     @Bean
     public Binding bindingEventoCanceladoDlq() {
         return BindingBuilder.bind(queueEventoCanceladoDlq()).to(exchangeDlx()).with(QUEUE_EVENTO_CANCELADO);
+    }
+
+    @Bean
+    public Binding bindingInscricaoCanceladaDlq() {
+        return BindingBuilder.bind(queueInscricaoCanceladaDlq()).to(exchangeDlx()).with(QUEUE_INSCRICAO_CANCELADA);
     }
 }
