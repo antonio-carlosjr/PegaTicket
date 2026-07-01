@@ -85,17 +85,17 @@ public class CancelamentoInscricaoService {
         EventResumo evento = eventClient.getEvento(inscricao.getEventoId());
 
         // PASSO 4 — para PAGO: verificar prazo antes de cancelar
-        boolean pagoDentroDoFrazo = false;
+        boolean pagoDentroDoPrazo = false;
         if ("PAGO".equals(evento.tipo())) {
             OffsetDateTime limite = evento.dataInicio().minusDays(
                     evento.prazoReembolsoDias() != null ? evento.prazoReembolsoDias() : 0);
             if (OffsetDateTime.now().isAfter(limite)) {
                 throw new BusinessException("PRAZO_CANCELAMENTO_ENCERRADO", 422);
             }
-            pagoDentroDoFrazo = true;
+            pagoDentroDoPrazo = true;
         }
 
-        final boolean devePublicar = pagoDentroDoFrazo;
+        final boolean devePublicar = pagoDentroDoPrazo;
         final Long eventoId = inscricao.getEventoId();
         final Long usuarioIdFinal = inscricao.getUsuarioId();
 

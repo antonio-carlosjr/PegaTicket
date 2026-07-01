@@ -34,7 +34,12 @@ public class PedidoCriadoPublisher {
 
     public void publicar(PedidoCriadoEvent evento) {
         if (rabbitTemplate == null) {
-            log.debug("RabbitTemplate indisponivel — pedido.criado nao publicado (no-op).");
+            // Em producao o RabbitTemplate SEMPRE existe (autoconfig ativo); um null aqui significa
+            // que a autoconfig do broker falhou. A saga de pagamento nunca iniciaria em silencio —
+            // por isso WARN (nao debug): a perda precisa ser visivel na operacao. (CR-5B-01)
+            log.warn("RabbitTemplate indisponivel — pedido.criado NAO publicado (saga de pagamento "
+                    + "nao sera iniciada): inscricaoId={} eventId={}",
+                    evento.inscricaoId(), evento.eventId());
             return;
         }
         log.debug("Publicando pedido.criado: inscricaoId={} eventId={}",

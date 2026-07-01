@@ -34,7 +34,12 @@ public class InscricaoCanceladaPublisher {
 
     public void publicar(InscricaoCanceladaEvent evento) {
         if (rabbitTemplate == null) {
-            log.debug("RabbitTemplate indisponivel — inscricao.cancelada nao publicada (no-op).");
+            // Em producao o RabbitTemplate SEMPRE existe (autoconfig ativo); um null aqui significa
+            // que a autoconfig do broker falhou. O gatilho do reembolso individual seria perdido em
+            // silencio — por isso WARN (nao debug): a perda precisa ser visivel na operacao. (CR-5B-01)
+            log.warn("RabbitTemplate indisponivel — inscricao.cancelada NAO publicada (reembolso "
+                    + "individual nao sera disparado): inscricaoId={} eventId={}",
+                    evento.inscricaoId(), evento.eventId());
             return;
         }
         log.debug("Publicando inscricao.cancelada: inscricaoId={} eventId={}",
