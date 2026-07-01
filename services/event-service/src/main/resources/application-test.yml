@@ -18,3 +18,5 @@ spring:
 app:
   internal:
     token: test-internal-secret
+  ticket-service:
+    url: http://localhost:8083

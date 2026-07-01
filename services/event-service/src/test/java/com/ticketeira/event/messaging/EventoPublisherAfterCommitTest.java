@@ -3,6 +3,7 @@ package com.ticketeira.event.messaging;
 import com.ticketeira.event.domain.Evento;
 import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
+import com.ticketeira.event.repository.AvaliacaoRepository;
 import com.ticketeira.event.repository.EventRepository;
 import com.ticketeira.event.service.EventService;
 import org.junit.jupiter.api.DisplayName;
@@ -17,7 +18,6 @@ import java.time.OffsetDateTime;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -44,6 +44,9 @@ class EventoPublisherAfterCommitTest {
 
     @Mock
     EventoPublisher eventoPublisher;
+
+    @Mock
+    AvaliacaoRepository avaliacaoRepository;
 
     // ---- A3.b ---------------------------------------------------------------
 
@@ -73,7 +76,7 @@ class EventoPublisherAfterCommitTest {
                 .thenThrow(new RuntimeException("Falha simulada — rollback"));
 
         // Chama encerrar: deve lancar excecao (rollback)
-        EventService eventService = new EventService(eventRepository, eventoPublisher);
+        EventService eventService = new EventService(eventRepository, eventoPublisher, avaliacaoRepository);
         try {
             eventService.encerrar(evento.getId(), 7L);
         } catch (Exception e) {
@@ -103,7 +106,7 @@ class EventoPublisherAfterCommitTest {
                 .thenReturn(Optional.of(evento));
         when(eventRepository.save(any(Evento.class))).thenReturn(evento);
 
-        EventService eventService = new EventService(eventRepository, eventoPublisher);
+        EventService eventService = new EventService(eventRepository, eventoPublisher, avaliacaoRepository);
         eventService.encerrar(evento.getId(), 7L);
 
         // Publisher deve ser chamado 1x (afterCommit — neste teste sincrono com mock de tx)
@@ -133,7 +136,7 @@ class EventoPublisherAfterCommitTest {
         when(eventRepository.save(any(Evento.class)))
                 .thenThrow(new RuntimeException("Falha simulada — rollback"));
 
-        EventService eventService = new EventService(eventRepository, eventoPublisher);
+        EventService eventService = new EventService(eventRepository, eventoPublisher, avaliacaoRepository);
         try {
             // cancelar tambem passou a publicar evento.cancelado em afterCommit
             eventService.cancelar(evento.getId(), 7L);

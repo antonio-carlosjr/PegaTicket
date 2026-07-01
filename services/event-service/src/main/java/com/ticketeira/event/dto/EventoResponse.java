@@ -23,9 +23,13 @@ public record EventoResponse(
         String imagemUrl,
         Long promotorId,
         OffsetDateTime criadoEm,
-        OffsetDateTime atualizadoEm
+        OffsetDateTime atualizadoEm,
+        ReputacaoResponse reputacao     // US-025: media+total de avaliacoes
 ) {
-    public static EventoResponse from(Evento e) {
+    /**
+     * Factory com reputacao calculada pelo AvaliacaoRepository.agregarReputacao (US-025).
+     */
+    public static EventoResponse from(Evento e, ReputacaoResponse reputacao) {
         return new EventoResponse(
                 e.getId(),
                 e.getTitulo(),
@@ -42,7 +46,16 @@ public record EventoResponse(
                 e.getImagemUrl(),
                 e.getPromotorId(),
                 e.getCriadoEm(),
-                e.getAtualizadoEm()
+                e.getAtualizadoEm(),
+                reputacao
         );
+    }
+
+    /**
+     * Factory sem reputacao: usada em endpoints de mutacao (criar/editar/publicar/cancelar/encerrar)
+     * onde a reputacao nao e relevante para a resposta imediata.
+     */
+    public static EventoResponse from(Evento e) {
+        return from(e, new ReputacaoResponse(null, 0L));
     }
 }

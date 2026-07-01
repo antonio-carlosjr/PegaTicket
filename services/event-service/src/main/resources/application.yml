@@ -43,6 +43,8 @@ springdoc:
 app:
   internal:
     token: ${INTERNAL_TOKEN:dev-internal-secret}
+  ticket-service:
+    url: ${TICKET_SERVICE_URL:http://localhost:8083}
 
 logging:
   level:

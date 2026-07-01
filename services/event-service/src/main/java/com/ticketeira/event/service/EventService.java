@@ -7,9 +7,12 @@ import com.ticketeira.event.domain.StatusEvento;
 import com.ticketeira.event.domain.TipoEvento;
 import com.ticketeira.event.dto.EventoCreateRequest;
 import com.ticketeira.event.dto.EventoInternoResponse;
+import com.ticketeira.event.dto.EventoResponse;
 import com.ticketeira.event.dto.EventoUpdateRequest;
+import com.ticketeira.event.dto.ReputacaoResponse;
 import com.ticketeira.event.dto.ReservaResponse;
 import com.ticketeira.event.messaging.EventoPublisher;
+import com.ticketeira.event.repository.AvaliacaoRepository;
 import com.ticketeira.event.repository.EventRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,10 +26,13 @@ public class EventService {
 
     private final EventRepository eventRepository;
     private final EventoPublisher eventoPublisher;
+    private final AvaliacaoRepository avaliacaoRepository;
 
-    public EventService(EventRepository eventRepository, EventoPublisher eventoPublisher) {
+    public EventService(EventRepository eventRepository, EventoPublisher eventoPublisher,
+                        AvaliacaoRepository avaliacaoRepository) {
         this.eventRepository = eventRepository;
         this.eventoPublisher = eventoPublisher;
+        this.avaliacaoRepository = avaliacaoRepository;
     }
 
     @Transactional
@@ -102,18 +108,21 @@ public class EventService {
     }
 
     @Transactional(readOnly = true)
-    public Evento detalhe(Long userId, Long eventoId) {
+    public EventoResponse detalhe(Long userId, Long eventoId) {
         Evento evento = eventRepository.findById(eventoId)
                 .orElseThrow(() -> new NotFoundException("Evento nao encontrado."));
-        // Evento publicado: qualquer autenticado pode ver
-        if (evento.getStatus() == StatusEvento.PUBLICADO) {
-            return evento;
+        // Evento publicado ou realizado: qualquer autenticado pode ver
+        if (evento.getStatus() == StatusEvento.PUBLICADO
+                || evento.getStatus() == StatusEvento.REALIZADO) {
+            ReputacaoResponse reputacao = avaliacaoRepository.agregarReputacao(eventoId);
+            return EventoResponse.from(evento, reputacao);
         }
-        // RASCUNHO/CANCELADO/REALIZADO: so o owner ve; outros recebem 404 (nao vaza existencia)
+        // RASCUNHO/CANCELADO: so o owner ve; outros recebem 404 (nao vaza existencia)
         if (!evento.getPromotorId().equals(userId)) {
             throw new NotFoundException("Evento nao encontrado.");
         }
-        return evento;
+        ReputacaoResponse reputacao = avaliacaoRepository.agregarReputacao(eventoId);
+        return EventoResponse.from(evento, reputacao);
     }
 
     /**

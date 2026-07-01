@@ -139,12 +139,12 @@ public class EventController {
                 eventService.listarPublicados(q, tipo, de, ate, pageable).map(EventoResumoResponse::from));
     }
 
-    /** GET /events/{id} — detalhe (PUBLICADO: qualquer autenticado; RASCUNHO/outros: apenas owner) */
+    /** GET /events/{id} — detalhe com reputacao (PUBLICADO/REALIZADO: qualquer autenticado; RASCUNHO/outros: apenas owner) */
     @GetMapping("/{id}")
     public ResponseEntity<EventoResponse> detalhe(
             @PathVariable Long id,
             @RequestHeader(value = "X-User-Id", required = false) Long userId) {
         requireUserId(userId);
-        return ResponseEntity.ok(EventoResponse.from(eventService.detalhe(userId, id)));
+        return ResponseEntity.ok(eventService.detalhe(userId, id));
     }
 }
