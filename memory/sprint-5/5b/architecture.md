@@ -79,7 +79,7 @@ Marina (PROMOTOR) -> POST /api/tickets/checkin { codigo_unico }
              checkinRepository.saveAndFlush(Checkin.de(ing.id))  // UNIQUE(ingresso_id) -> 2o simultaneo: DataIntegrityViolation -> 409
           200 CheckinResponse{ ingressoId, status=UTILIZADO, realizadoEm }
 ```
-Concorrencia: a transicao `WHERE status='ATIVO'` (na entidade, via `@Version`-free guard + UNIQUE em `checkins`) garante 1 sucesso, 2o -> 409. Ver Estrategias.
+Concorrencia (duplo check-in do MESMO QR): a barreira atomica e o **`UNIQUE(ingresso_id)` em `checkins`** — 2 devices simultaneos inserem o mesmo `checkin`, 1 vence e o outro colide (`DataIntegrityViolationException -> 409`). `Ingresso.realizarCheckin()` cobre o caminho sequencial (409 se ja UTILIZADO). Ver Estrategias. (Nota CR-5B-02: a mutacao de `ingressos.status` usa dirty-check do JPA, sem `WHERE status='ATIVO'`; isso e suficiente para o duplo check-in por causa do UNIQUE, mas ver a linha "Cancelar e check-in simultaneos" para a corrida cross-actor.)
 
 ### CANCELAMENTO + reembolso individual (US-035 + US-042 individual)
 ```
@@ -139,7 +139,7 @@ Reputacao (US-025): GET /api/events/{id}
 | Cenario | Estrategia |
 |---|---|
 | Duplo check-in do mesmo QR (US-034.6) | **`UNIQUE(ingresso_id)` em `checkins`** (V1, ja existe) + transicao `Ingresso ATIVO->UTILIZADO` que **lanca 409 se ja UTILIZADO**. 2 devices simultaneos: 1 vence (insere checkin + UTILIZADO), o outro colide no `UNIQUE` (`DataIntegrityViolationException -> 409`) ou ve `INGRESSO_JA_UTILIZADO`. O insert do `checkins` e a barreira atomica final. |
-| Cancelar e check-in simultaneos do mesmo ingresso | Ambos mutam `ingressos.status` a partir de `ATIVO`. O check-in faz `ATIVO->UTILIZADO`; o cancelamento faz `ATIVO->CANCELADO`. Transicoes condicionais (`WHERE status='ATIVO'`) + row lock serializam -> exatamente um vence; o perdedor ve estado ja mudado -> 409. |
+| Cancelar e check-in simultaneos do mesmo ingresso | Ambos mutam `ingressos.status` a partir de `ATIVO` (check-in `->UTILIZADO`; cancelamento `->CANCELADO`) via **dirty-check do JPA, sem guard `WHERE status='ATIVO'`** → **last-writer-wins** no `ingressos.status`, sem 409 ao perdedor (CR-5B-02). **Isto NAO quebra invariante critica:** o duplo check-in continua barrado pelo `UNIQUE(ingresso_id)`, e o reembolso unico depende de `pagamentos.status` (transicao condicional sob lock), nao de `ingressos.status`. O residuo e um estado terminal do ingresso inconsistente numa corrida entre atores distintos (promotor na porta vs. participante cancelando no mesmo instante) — janela estreita, impacto de auditoria. **Hardening (trocar por `UPDATE ... WHERE status='ATIVO'` retornando rowsAffected → 409 ao perdedor) previsto na 5C** (US de observabilidade/hardening); ver `code-review.md` CR-5B-02 e `bugs.md`. |
 | 2 cancelamentos simultaneos da mesma inscricao (US-035.5) | `UPDATE inscricoes SET status=CANCELADA WHERE id=? AND status IN (ATIVA,PENDENTE_PAGAMENTO)` -> rowsAffected; 1=sucesso, 0=409 `INSCRICAO_JA_CANCELADA`. Row lock serializa. Vaga liberada 1x (so o vencedor chama liberarVaga). |
 | Dupla avaliacao (US-024.2) | `UNIQUE(evento_id,usuario_id)` (V1) + `DataIntegrityViolationException -> 409 AVALIACAO_DUPLICADA`. |
 | `inscricao.cancelada` reentregue | `processed_events(eventId)` PK no payment -> 2a entrega colide -> ACK no-op. Reembolso aplicado 1x. |
