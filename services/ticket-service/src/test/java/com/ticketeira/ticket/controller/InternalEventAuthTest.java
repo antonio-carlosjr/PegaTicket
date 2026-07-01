@@ -77,7 +77,8 @@ class InternalEventAuthTest {
         // Verifica que o ticket-service usa EventResumo.preco() para montar PagamentoPendenteResponse
         when(eventClient.getEvento(anyLong()))
                 .thenReturn(new EventResumo(1L, "Show", "PAGO", "PUBLICADO", 10, 100,
-                        new BigDecimal("199.99"), 5L));
+                        new BigDecimal("199.99"), 5L,
+                        java.time.OffsetDateTime.now().plusDays(30), 7));
 
         mvc.perform(
                 org.springframework.test.web.servlet.request.MockMvcRequestBuilders
