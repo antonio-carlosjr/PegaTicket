@@ -15,8 +15,8 @@
 | US-021 | Como promotor, quero editar/publicar/cancelar meu evento para gerir a oferta | DONE |
 | US-022 | Como participante, quero listar/buscar eventos publicados para escolher onde ir | DONE |
 | US-023 | Como participante, quero ver o detalhe de um evento (vagas, preço, data) | DONE |
-| US-024 | Como participante, quero avaliar um evento que participei (nota 1-5) | SPRINT-5 |
-| US-025 | Como promotor, quero ver a reputação (média de avaliações) do meu evento | SPRINT-5 |
+| US-024 | Como participante, quero avaliar um evento que participei (nota 1-5) | DONE |
+| US-025 | Como promotor, quero ver a reputação (média de avaliações) do meu evento | DONE |
 
 ## Épico B — Inscrições & Ingressos (ticket-service) · RF03, RF04, RF09, RF10
 | ID | História | Estado |
@@ -25,14 +25,20 @@
 | US-031 | Como participante, quero me inscrever num evento (com controle de capacidade e sem dupla inscrição) | DONE |
 | US-032 | Como participante, quero receber um ingresso único com QR após confirmação | DONE |
 | US-033 | Como participante, quero ver "meus ingressos" e histórico de inscrições | DONE |
-| US-034 | Como promotor, quero validar o ingresso (check-in por QR) na porta do evento | SPRINT-5 |
-| US-035 | Como participante, quero cancelar minha inscrição conforme a política | SPRINT-5 |
+| US-034 | Como promotor, quero validar o ingresso (check-in por QR) na porta do evento | DONE |
+| US-035 | Como participante, quero cancelar minha inscrição conforme a política | DONE |
 
 **Follow-ups técnicos da Sprint 3 (code-review, não bloqueiam):**
 - `TECH-S3-01` — `EventService.reservar/liberarVaga`: trocar `findById` do hot path por `UPDATE ... RETURNING`. *(CR-S3-02/03)*
 - `TECH-S3-02` — `MeusIngressos`: dedupe por `eventoId` antes do fan-out + endpoint batch quando houver 3ª ocorrência. *(CR-S3-07)*
 - `TECH-S3-03` — `EventoDetalhe`: refetch de `vagasDisponiveis` pós-inscrição; retry sem `window.location.reload()`. *(CR-S3-08/10)*
 - `TECH-S3-04` — Prod (Railway): `INTERNAL_TOKEN` sobrescreve o default `dev-internal-secret`.
+
+**Follow-ups técnicos da Sprint 5B (code-review, não bloqueiam → 5C hardening):**
+- `TECH-S5B-01` — corrida check-in vs. cancelamento do mesmo ingresso: trocar dirty-check por `UPDATE ingressos SET status=? WHERE id=? AND status='ATIVO'` (rowsAffected → 409 ao perdedor). Hoje last-writer-wins no `ingressos.status` (não quebra dinheiro/duplo check-in). *(CR-5B-02, P2)*
+- `TECH-S5B-02` — `PagamentoService`: remover construtor de compat (test-only) que deixa `reembolsoRepository=null` (NPE latente) ou adicionar guard. *(CR-5B-03, P2)*
+- `TECH-S5B-03` — `GlobalExceptionHandler` (ticket): handler genérico de `DataIntegrityViolationException` responde `"JA_INSCRITO"` hardcoded; devolver code neutro e cada service traduzir o seu. *(CR-5B-04, P2)*
+- `TECH-S5B-04` — `PagamentoAprovadoPublisher` (payment, S4) ainda loga perda em DEBUG; elevar a WARN por consistência com o padrão promovido. *(CR-5B recorrência #1)*
 
 ## Épico C — Pagamentos & Escrow (payment-service) · RF05, RF06
 | ID | História | Estado |

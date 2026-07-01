@@ -60,3 +60,11 @@ Fora desta trilha: 5C (carga/observabilidade/hardening).
 | 10 | docs | code-review + alinha architecture.md (CR-5B-02) |
 | 11 | docs | regression-report (Passo 3) |
 | 12 | docs | pr-body (Passo 4) |
+
+## CI do PR #21 — VERDE (1 ciclo)
+- `build + test (Java 21)` **pass 3m18s** (Testcontainers PG+Rabbit — invariantes concorrentes/idempotência certificados) · `build + lint (Node 20)` **pass 29s**.
+- **Aceite do PO passa a PLENO** (a condição "confirmar CI verde" foi cumprida).
+
+## Passo 5 — Retrospectiva
+- `retrospective.md` + `memory/code-review/sprint-5b.md` escritos. 2 regras promovidas a `coding-standards.md` (§Mensageria publisher WARN; §Concorrência UPDATE condicional). Backlog: US-024/025/034/035 → **DONE**; follow-ups `TECH-S5B-01..04` registrados para a 5C.
+- **Sem merge — decisão humana.**
