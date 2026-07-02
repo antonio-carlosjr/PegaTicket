@@ -97,7 +97,7 @@ class CheckinControllerTest {
                         eventoId, "Show Teste", "GRATUITO", "PUBLICADO",
                         10, 100, null, promotorId,
                         OffsetDateTime.of(2026, 9, 1, 20, 0, 0, 0, ZoneOffset.of("-03:00")),
-                        null
+                        null, null
                 ));
 
         Inscricao ins = Inscricao.criar(PARTICIPANTE_ID, eventoId);
@@ -216,7 +216,7 @@ class CheckinControllerTest {
                 .thenReturn(new EventResumo(
                         EVENTO_ID, "Show", "GRATUITO", "PUBLICADO",
                         10, 100, null, PROMOTOR_DONO,
-                        OffsetDateTime.now().plusDays(30), null
+                        OffsetDateTime.now().plusDays(30), null, null
                 ));
 
         Inscricao ins = Inscricao.criar(PARTICIPANTE_ID, EVENTO_ID);

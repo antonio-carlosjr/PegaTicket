@@ -74,7 +74,7 @@ class InscricaoServiceTest {
         // Defaults: evento GRATUITO PUBLICADO, usuario nao inscrito
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show Gratuito", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null, null));
         when(inscricaoRepository.existsByUsuarioIdAndEventoId(USUARIO_ID, EVENTO_ID)).thenReturn(false);
     }
 
@@ -119,7 +119,7 @@ class InscricaoServiceTest {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Festival", "PAGO", "PUBLICADO", 10, 100,
                         new java.math.BigDecimal("99.00"), 1L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoPaga =
                 com.ticketeira.ticket.domain.Inscricao.pendentePagamento(USUARIO_ID, EVENTO_ID);
@@ -139,10 +139,26 @@ class InscricaoServiceTest {
     }
 
     @Test
+    void inscrever_eventoJaEncerrado_lanca422_semReservar() {
+        when(eventClient.getEvento(EVENTO_ID))
+                .thenReturn(new EventResumo(EVENTO_ID, "Show Gratuito", "GRATUITO", "PUBLICADO", 10, 100,
+                        null, 1L,
+                        java.time.OffsetDateTime.now().minusDays(2),   // dataInicio
+                        java.time.OffsetDateTime.now().minusDays(1),   // dataFim (ja passou)
+                        null));
+
+        assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("EVENTO_JA_ENCERRADO");
+
+        verify(eventClient, never()).reservarVaga(any());
+    }
+
+    @Test
     void inscrever_eventoNaoPublicado_lanca422_semReservar() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Rascunho", "GRATUITO", "RASCUNHO", null, 100,
-                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null));
+                        null, 1L, java.time.OffsetDateTime.now().plusDays(30), null, null));
 
         assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
                 .isInstanceOf(BusinessException.class)

@@ -8,6 +8,7 @@ import java.time.OffsetDateTime;
  * Campos mapeados conforme EventoInternoResponse do event-service.
  * Sprint 4: +preco (null se GRATUITO) +promotorId (para payload de pedido.criado).
  * Sprint 5B: +dataInicio, +prazoReembolsoDias (para checar prazo de cancelamento, ADR-T15).
+ * Sprint 5B (Passo extra): +dataFim (para bloquear inscricao em evento ja ENCERRADO).
  */
 public record EventResumo(
         Long id,
@@ -19,5 +20,6 @@ public record EventResumo(
         BigDecimal preco,           // null se GRATUITO; = valor do evento para payload AMQP
         Long promotorId,            // para repasse no payload pedido.criado (S5)
         OffsetDateTime dataInicio,  // para checagem de prazo de cancelamento (5B, ADR-T15)
+        OffsetDateTime dataFim,     // para bloquear inscricao em evento ja ENCERRADO
         Integer prazoReembolsoDias  // janela de cancelamento em dias; null se GRATUITO
 ) {}

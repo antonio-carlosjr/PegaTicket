@@ -93,7 +93,7 @@ class CheckinConcorrenciaTest extends TestcontainersBase {
                         EVENTO_ID, "Show", "GRATUITO", "PUBLICADO",
                         10, 100, null, PROMOTOR_DONO,
                         OffsetDateTime.of(2026, 9, 1, 20, 0, 0, 0, ZoneOffset.of("-03:00")),
-                        null
+                        null, null
                 ));
     }
 

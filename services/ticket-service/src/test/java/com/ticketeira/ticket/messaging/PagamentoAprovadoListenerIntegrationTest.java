@@ -70,7 +70,7 @@ class PagamentoAprovadoListenerIntegrationTest extends TestcontainersBase {
         when(eventClient.getEvento(anyLong()))
                 .thenReturn(new EventResumo(1L, "Show", "PAGO", "PUBLICADO", 10, 100,
                         new BigDecimal("100.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
     }
 
     /**

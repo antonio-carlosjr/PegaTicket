@@ -67,7 +67,7 @@ class InscricaoAfterCommitRollbackTest {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
                         new BigDecimal("100.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
         when(inscricaoRepository.existsByUsuarioIdAndEventoId(anyLong(), anyLong())).thenReturn(false);
     }
 

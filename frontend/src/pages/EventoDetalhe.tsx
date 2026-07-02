@@ -68,6 +68,7 @@ function mensagemErroInscricao(err: unknown): string {
   if (codigo.startsWith('JA_INSCRITO')) return 'Você já está inscrito neste evento.'
   if (codigo.startsWith('EVENTO_ESGOTADO')) return 'Não há mais vagas disponíveis.'
   if (codigo.startsWith('EVENTO_NAO_PUBLICADO')) return 'Evento não disponível para inscrição.'
+  if (codigo.startsWith('EVENTO_JA_ENCERRADO')) return 'Este evento já aconteceu. As inscrições estão encerradas.'
   if (codigo.startsWith('EVENTO_PAGO_NAO_SUPORTADO')) return 'Inscrição em eventos pagos ainda não disponível.'
   if (codigo.startsWith('EVENTO_INDISPONIVEL')) return 'Serviço temporariamente indisponível. Tente novamente em instantes.'
   return extractApiError(err, 'Não foi possível realizar a inscrição.')
@@ -153,9 +154,12 @@ export function EventoDetalhe() {
   if (!evento) return null
 
   const ehCancelado = evento.status === 'CANCELADO'
+  // Evento já encerrado (dataFim no passado) — inscrições fechadas (espelha o guard do backend).
+  const jaAconteceu = new Date(evento.dataFim).getTime() <= Date.now()
   const podeInscrever =
     evento.tipo === 'GRATUITO' &&
     evento.status === 'PUBLICADO' &&
+    !jaAconteceu &&
     (evento.vagasDisponiveis === null || evento.vagasDisponiveis > 0)
 
   const eventoPago = evento.tipo === 'PAGO'
@@ -318,6 +322,12 @@ export function EventoDetalhe() {
       {/* CTA de inscrição */}
       {!inscricao && (
         <div className="flex flex-col items-center gap-3 rounded-xl border bg-card p-6 text-center">
+          {jaAconteceu && !ehCancelado && (
+            <p className="font-medium text-muted-foreground">
+              Este evento já aconteceu. As inscrições estão encerradas.
+            </p>
+          )}
+
           {podeInscrever && (
             <>
               <p className="text-sm text-muted-foreground">
@@ -341,7 +351,7 @@ export function EventoDetalhe() {
             </>
           )}
 
-          {eventoPago && evento.status === 'PUBLICADO' && (evento.vagasDisponiveis === null || evento.vagasDisponiveis > 0) && (
+          {eventoPago && evento.status === 'PUBLICADO' && !jaAconteceu && (evento.vagasDisponiveis === null || evento.vagasDisponiveis > 0) && (
             <>
               <p className="text-sm text-muted-foreground">
                 Evento pago —{' '}
@@ -361,13 +371,13 @@ export function EventoDetalhe() {
               </Button>
             </>
           )}
-          {eventoPago && evento.status === 'PUBLICADO' && evento.vagasDisponiveis === 0 && (
+          {eventoPago && evento.status === 'PUBLICADO' && !jaAconteceu && evento.vagasDisponiveis === 0 && (
             <p className="font-medium text-destructive">
               Não há mais vagas disponíveis para este evento.
             </p>
           )}
 
-          {!podeInscrever && !eventoPago && evento.status === 'PUBLICADO' && evento.vagasDisponiveis === 0 && (
+          {!podeInscrever && !eventoPago && evento.status === 'PUBLICADO' && !jaAconteceu && evento.vagasDisponiveis === 0 && (
             <p className="font-medium text-destructive">
               Não há mais vagas disponíveis para este evento.
             </p>
