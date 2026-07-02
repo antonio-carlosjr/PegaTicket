@@ -12,6 +12,7 @@ import java.time.OffsetDateTime;
  * indisponivel numa chamada service-to-service.
  * Sprint 4: +preco (null se GRATUITO) +promotorId (para repasse).
  * Sprint 5B: +dataInicio +prazoReembolsoDias (para o ticket checar politica de cancelamento — ADR-T15).
+ * Sprint 5B (Passo extra): +dataFim (para o ticket bloquear inscricao em evento ja ENCERRADO).
  */
 public record EventoInternoResponse(
         Long id,
@@ -23,6 +24,7 @@ public record EventoInternoResponse(
         BigDecimal preco,               // null se GRATUITO
         Long promotorId,                // para repasse e payload de pedido.criado
         OffsetDateTime dataInicio,      // para checar prazo de cancelamento (US-035)
+        OffsetDateTime dataFim,         // para bloquear inscricao em evento ja ENCERRADO
         Integer prazoReembolsoDias      // janela de cancelamento em dias (null se GRATUITO)
 ) {
     public static EventoInternoResponse from(Evento e) {
@@ -36,6 +38,7 @@ public record EventoInternoResponse(
                 e.getPreco(),
                 e.getPromotorId(),
                 e.getDataInicio(),
+                e.getDataFim(),
                 e.getPrazoReembolsoDias());
     }
 }

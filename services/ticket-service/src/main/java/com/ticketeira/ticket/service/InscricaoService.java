@@ -86,6 +86,13 @@ public class InscricaoService {
             throw new BusinessException("EVENTO_NAO_PUBLICADO", 422);
         }
 
+        // Bloqueia inscricao em evento que ja ENCERROU (dataFim no passado). Referencial = fim
+        // do evento: um evento acontecendo agora (comecou, nao terminou) continua inscritivel.
+        // OffsetDateTime compara instantes absolutos -> correto independente do fuso gravado.
+        if (evento.dataFim() != null && !OffsetDateTime.now().isBefore(evento.dataFim())) {
+            throw new BusinessException("EVENTO_JA_ENCERRADO", 422);
+        }
+
         // PASSO 1.5 — pre-check de duplicidade (otimizacao; defesa final e o UNIQUE)
         if (inscricaoRepository.existsByUsuarioIdAndEventoId(usuarioId, eventoId)) {
             throw new BusinessException("JA_INSCRITO", 409);

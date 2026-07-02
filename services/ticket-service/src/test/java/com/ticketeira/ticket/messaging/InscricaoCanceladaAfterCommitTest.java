@@ -78,6 +78,7 @@ class InscricaoCanceladaAfterCommitTest extends TestcontainersBase {
                         EVENTO_ID, "Show", "PAGO", "PUBLICADO",
                         10, 100, new BigDecimal("100.00"), 5L,
                         OffsetDateTime.now().plusDays(30),
+                        null,
                         7
                 ));
     }

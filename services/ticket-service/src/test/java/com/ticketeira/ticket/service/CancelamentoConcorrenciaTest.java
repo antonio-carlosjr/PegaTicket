@@ -68,7 +68,7 @@ class CancelamentoConcorrenciaTest extends TestcontainersBase {
                 .thenReturn(new EventResumo(
                         EVENTO_ID, "Show", "GRATUITO", "PUBLICADO",
                         10, 100, null, 5L,
-                        OffsetDateTime.now().plusDays(30), null
+                        OffsetDateTime.now().plusDays(30), null, null
                 ));
     }
 

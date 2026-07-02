@@ -102,7 +102,7 @@ class InscricaoPagaConcorrenciaTest {
         when(eventClient.getEvento(anyLong()))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show Pago", "PAGO", "PUBLICADO", 1, 100,
                         new BigDecimal("150.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
 
         // reservarVaga: primeira chamada atomica no event-service real (mockado aqui).
         // Simula: 1 thread ganha, demais recebem EVENTO_ESGOTADO (usando estado compartilhado).

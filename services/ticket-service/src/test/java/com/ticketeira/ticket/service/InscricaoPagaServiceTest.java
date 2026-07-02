@@ -81,7 +81,7 @@ class InscricaoPagaServiceTest {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
                         new BigDecimal("100.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
 
         // Mock do save retorna inscricao com PENDENTE_PAGAMENTO
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoPendente(1L);
@@ -105,7 +105,7 @@ class InscricaoPagaServiceTest {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
                         new BigDecimal("100.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoPendente(1L);
         when(inscricaoRepository.save(any())).thenReturn(inscricaoSalva);
@@ -123,7 +123,7 @@ class InscricaoPagaServiceTest {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 0, 100,
                         new BigDecimal("100.00"), 5L,
-                        java.time.OffsetDateTime.now().plusDays(30), 7));
+                        java.time.OffsetDateTime.now().plusDays(30), null, 7));
         doThrow(new BusinessException("EVENTO_ESGOTADO", 409))
                 .when(eventClient).reservarVaga(EVENTO_ID);
 
@@ -135,6 +135,24 @@ class InscricaoPagaServiceTest {
         verify(pedidoCriadoPublisher, never()).publicar(any());
     }
 
+    @Test
+    @DisplayName("A1.d — inscrever_eventoPagoJaEncerrado_lanca422_semReservarESemPublicar")
+    void inscrever_eventoPagoJaEncerrado_lanca422_semReservarESemPublicar() {
+        when(eventClient.getEvento(EVENTO_ID))
+                .thenReturn(new EventResumo(EVENTO_ID, "Show", "PAGO", "PUBLICADO", 10, 100,
+                        new BigDecimal("100.00"), 5L,
+                        java.time.OffsetDateTime.now().minusDays(2),   // dataInicio
+                        java.time.OffsetDateTime.now().minusDays(1),   // dataFim (ja passou)
+                        7));
+
+        assertThatThrownBy(() -> inscricaoService.inscrever(EVENTO_ID, USUARIO_ID))
+                .isInstanceOf(BusinessException.class)
+                .hasMessage("EVENTO_JA_ENCERRADO");
+
+        verify(eventClient, never()).reservarVaga(any());
+        verify(pedidoCriadoPublisher, never()).publicar(any());
+    }
+
     // ---- A6: Regressao GRATUITO ----
 
     @Test
@@ -142,7 +160,7 @@ class InscricaoPagaServiceTest {
     void inscrever_eventoGratuito_emiteIngressoImediato_intacto() {
         when(eventClient.getEvento(EVENTO_ID))
                 .thenReturn(new EventResumo(EVENTO_ID, "Workshop", "GRATUITO", "PUBLICADO", 10, 100,
-                        null, 5L, java.time.OffsetDateTime.now().plusDays(30), null));
+                        null, 5L, java.time.OffsetDateTime.now().plusDays(30), null, null));
 
         com.ticketeira.ticket.domain.Inscricao inscricaoSalva = mockInscricaoAtiva(2L);
         com.ticketeira.ticket.domain.Ingresso ingressoSalvo = mockIngresso(2L, 2L);

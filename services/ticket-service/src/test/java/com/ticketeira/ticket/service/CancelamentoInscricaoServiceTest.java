@@ -98,6 +98,7 @@ class CancelamentoInscricaoServiceTest {
                 EVENTO_ID, "Workshop", "GRATUITO", "PUBLICADO",
                 10, 100, null, 5L,
                 OffsetDateTime.now().plusDays(30),
+                null,
                 null
         );
     }
@@ -109,6 +110,7 @@ class CancelamentoInscricaoServiceTest {
                 EVENTO_ID, "Show", "PAGO", "PUBLICADO",
                 10, 100, new BigDecimal("100.00"), 5L,
                 OffsetDateTime.now().plusDays(30),
+                null,
                 7
         );
     }
@@ -120,6 +122,7 @@ class CancelamentoInscricaoServiceTest {
                 EVENTO_ID, "Show Passado", "PAGO", "PUBLICADO",
                 10, 100, new BigDecimal("100.00"), 5L,
                 OffsetDateTime.now().minusDays(1),
+                null,
                 7
         );
     }
@@ -260,6 +263,7 @@ class CancelamentoInscricaoServiceTest {
                 EVENTO_ID, "Show Limite", "PAGO", "PUBLICADO",
                 10, 100, new BigDecimal("100.00"), 5L,
                 OffsetDateTime.now().plusDays(7).plusMinutes(1),   // levemente alem do prazo
+                null,
                 7
         );
 
