@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -73,6 +73,9 @@ export function CriarEditarEvento() {
 
   const [etapa, setEtapa] = useState(0)
   const [carregandoEvento, setCarregandoEvento] = useState(isEdicao)
+  // Timestamp da última troca de etapa — usado para ignorar um submit acidental que
+  // ocorra logo após avançar (ex.: 2º clique caindo no botão que trocou de posição).
+  const ultimoAvancoRef = useRef(0)
 
   const {
     register,
@@ -142,7 +145,10 @@ export function CriarEditarEvento() {
   async function avancar() {
     const campos = STEPS[etapa].campos
     const ok = await trigger(campos)
-    if (ok) setEtapa((prev) => prev + 1)
+    if (ok) {
+      ultimoAvancoRef.current = performance.now()
+      setEtapa((prev) => prev + 1)
+    }
   }
 
   function voltar() {
@@ -151,9 +157,14 @@ export function CriarEditarEvento() {
 
   // ─── Submissão final ─────────────────────────────────────────────────────
   async function onSubmit(values: EventoFormValues) {
-    // Blindagem: so salva na ULTIMA etapa. Evita submit prematuro durante a
+    // Blindagem 1: so salva na ULTIMA etapa. Evita submit prematuro durante a
     // navegacao do wizard (ex.: Enter num campo ou foco no botao de submit).
     if (etapa < STEPS.length - 1) return
+    // Blindagem 2: ignora um submit que ocorra imediatamente apos avancar de etapa.
+    // Cobre o "swap de posicao" — ao ir para a ultima etapa, o botao "Salvar/Criar"
+    // assume o lugar do "Proximo"; um 2o clique (ou clique humano rapido) cairia no
+    // submit e salvaria sem o usuario configurar a etapa. Exige um clique deliberado.
+    if (performance.now() - ultimoAvancoRef.current < 600) return
     try {
       const payload: EventoCreatePayload = {
         titulo: values.titulo,
@@ -231,7 +242,17 @@ export function CriarEditarEvento() {
       <StepIndicator etapaAtual={etapa} total={STEPS.length} />
 
       {/* Formulário */}
-      <form onSubmit={handleSubmit(onSubmit)} noValidate>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        onKeyDown={(e) => {
+          // Enter nunca submete o wizard (evita salvar fora da última etapa);
+          // dentro de textarea o Enter continua criando nova linha.
+          if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'TEXTAREA') {
+            e.preventDefault()
+          }
+        }}
+        noValidate
+      >
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">
