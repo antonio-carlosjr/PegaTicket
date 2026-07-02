@@ -83,7 +83,14 @@ export function MeusEventos() {
     carregar()
   }, [carregar])
 
-  async function handlePublicar(id: number) {
+  async function handlePublicar(id: number, titulo: string) {
+    const confirmado = window.confirm(
+      `Publicar "${titulo}"?\n\nApós publicar, o evento fica visível para inscrições e ` +
+        `NÃO poderá mais ser editado (capacidade, datas, preço, etc.). ` +
+        `Confira tudo antes de continuar.`
+    )
+    if (!confirmado) return
+
     setEmAcao(id)
     try {
       await publicarEvento(id)
@@ -117,15 +124,22 @@ export function MeusEventos() {
       const code = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
       const isConflito = (e as { response?: { status?: number } })?.response?.status === 409
       if (isConflito) {
-        if (code === 'TRANSICAO_INVALIDA' || code === 'EVENTO_JA_REALIZADO') {
+        if (code === 'EVENTO_JA_REALIZADO') {
+          toast.error('Este evento ja foi encerrado', {
+            description: 'Atualizamos a lista com o status atual do evento.',
+          })
+        } else if (code === 'TRANSICAO_INVALIDA') {
           toast.error('Nao e possivel encerrar', {
-            description: 'O status atual do evento nao permite encerramento.',
+            description: 'Apenas eventos publicados podem ser encerrados.',
           })
         } else {
           toast.error('Nao e possivel encerrar', {
             description: extractApiError(e, 'Status nao permite esta transicao.'),
           })
         }
+        // A lista pode estar desatualizada (o evento ja mudou de status em outra aba/acao).
+        // Ressincroniza para o card refletir o estado real e o botao correto aparecer.
+        await carregar()
       } else {
         toast.error('Erro ao encerrar evento', {
           description: extractApiError(e, 'Nao foi possivel encerrar o evento.'),
@@ -244,7 +258,7 @@ function EventoCard({
 }: {
   evento: EventoResumo
   emAcao: boolean
-  onPublicar: (id: number) => Promise<void>
+  onPublicar: (id: number, titulo: string) => Promise<void>
   onEncerrar: (id: number) => Promise<void>
   onCancelar: (id: number, titulo: string) => Promise<void>
 }) {
@@ -334,7 +348,7 @@ function EventoCard({
               size="sm"
               className="flex-1"
               loading={emAcao}
-              onClick={() => onPublicar(evento.id)}
+              onClick={() => onPublicar(evento.id, evento.titulo)}
             >
               Publicar
             </Button>
